@@ -1,88 +1,113 @@
-// frontend/src/utils/api.ts
+// src/utils/api.ts
 
-/**
- * Centralize backend base URL for all API calls.
- * NEXT_PUBLIC_ vars are inlined by Next.js at build time.
- * Fallback is localhost for your development workflow.
- */
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
-// -------------------- AUTH --------------------
+// Helper to extract data from response
+function extractData(response: any) {
+  // Handle { status: 200, data: { ... } } format
+  if (response.data) {
+    return response.data;
+  }
+  return response;
+}
 
 export async function registerUser(fullName: string, email: string, password: string) {
-  // Step 1: Register the user
-  const registerRes = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fullName, email, password }),
-  });
+  try {
+    // Step 1: Register
+    const registerRes = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fullName, email, password }),
+    });
 
-  const registerData = await registerRes.json().catch(() => ({}));
+    const registerData = await registerRes.json();
+    console.log("Register response:", registerData);
 
-  if (!registerRes.ok) {
-    throw new Error(registerData.message || "Registration failed");
+    if (!registerRes.ok) {
+      throw new Error(registerData.message || "Registration failed");
+    }
+
+    // Step 2: Auto-login to get token
+    const loginRes = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const loginData = await loginRes.json();
+    console.log("Login response:", loginData);
+
+    if (!loginRes.ok) {
+      // Registration succeeded but auto-login failed
+      window.location.href = "/auth/login";
+      throw new Error("Registration successful! Please log in.");
+    }
+
+    // Extract token and user from login response
+    const loginResult = extractData(loginData);
+    
+    if (loginResult.token) {
+      localStorage.setItem("token", loginResult.token);
+    }
+    if (loginResult.user) {
+      localStorage.setItem("user", JSON.stringify(loginResult.user));
+      return loginResult.user;
+    }
+    
+    throw new Error("Invalid response format from server");
+  } catch (error: any) {
+    console.error("Registration error:", error);
+    throw error;
   }
-
-  console.log("Registration successful:", registerData);
-
-  // Step 2: Auto-login after successful registration
-  const loginRes = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-
-  const loginData = await loginRes.json().catch(() => ({}));
-
-  if (!loginRes.ok) {
-    // If auto-login fails, redirect to login page
-    console.warn("Auto-login failed, redirecting to login page");
-    window.location.href = "/auth/login";
-    throw new Error("Registration successful! Please log in.");
-  }
-
-  // Extract token and user from login response
-  const data = loginData.data || loginData;
-  
-  if (data?.token) {
-    localStorage.setItem("token", data.token);
-  }
-  if (data?.user) {
-    localStorage.setItem("user", JSON.stringify(data.user));
-  }
-  
-  console.log("Auto-login successful:", data?.user);
-  
-  return data?.user;
 }
 
 export async function loginUser(email: string, password: string) {
-  const res = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-  const responseData = await res.json().catch(() => ({}));
+    const data = await res.json();
+    console.log("Login response:", data);
 
-  if (!res.ok) {
-    throw new Error(responseData.message || "Login failed");
-  }
+    if (!res.ok) {
+      throw new Error(data.message || "Login failed");
+    }
 
-  const data = responseData.data || responseData;
-  
-  if (data?.token) {
-    localStorage.setItem("token", data.token);
+    const result = extractData(data);
+    
+    if (result.token) {
+      localStorage.setItem("token", result.token);
+    }
+    if (result.user) {
+      localStorage.setItem("user", JSON.stringify(result.user));
+      return result.user;
+    }
+    
+    throw new Error("Invalid response format from server");
+  } catch (error: any) {
+    console.error("Login error:", error);
+    throw error;
   }
-  if (data?.user) {
-    localStorage.setItem("user", JSON.stringify(data.user));
-  }
-  
-  return data?.user;
 }
 
 // -------------------- PROPERTIES --------------------
+
+export async function getProperties() {
+  const res = await fetch(`${API_BASE_URL}/properties`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Failed to fetch properties");
+  return data;
+}
+
+export async function getPropertyById(id: string) {
+  const res = await fetch(`${API_BASE_URL}/properties/${id}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Failed to fetch property");
+  return data;
+}
 
 export async function createProperty(propertyData: any) {
   const token = localStorage.getItem("token");
@@ -97,25 +122,8 @@ export async function createProperty(propertyData: any) {
     body: JSON.stringify(propertyData),
   });
 
-  const responseData = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(responseData.message || "Failed to create property");
-  }
-
-  return responseData;
-}
-
-export async function getProperties() {
-  const res = await fetch(`${API_BASE_URL}/properties`);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || "Failed to fetch properties");
-  return data;
-}
-
-export async function getPropertyById(id: string) {
-  const res = await fetch(`${API_BASE_URL}/properties/${id}`);
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || "Failed to fetch property");
+  if (!res.ok) throw new Error(data.message || "Failed to create property");
   return data;
 }
 
@@ -134,7 +142,6 @@ export async function updateProperty(id: string, updateData: any) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || "Failed to update property");
-
   return data;
 }
 
@@ -149,7 +156,6 @@ export async function deleteProperty(id: string) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || "Failed to delete property");
-
   return data;
 }
 
@@ -170,7 +176,6 @@ export async function createBooking(propertyId: string, checkIn: string, checkOu
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || "Booking failed");
-
   return data;
 }
 
@@ -191,7 +196,6 @@ export async function uploadPropertyImages(propertyId: string, files: File[]) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || "Failed to upload images");
-
   return data;
 }
 
