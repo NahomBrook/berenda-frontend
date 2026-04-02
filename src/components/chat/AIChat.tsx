@@ -4,8 +4,10 @@
 import { useState, useEffect, useRef } from "react";
 import { Bot, Send, X, Sparkles, Loader2, Minimize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { API_BASE_URL } from "@/utils/api";
 import { useLanguage } from "../../context/LanguageContext";
+
+// HARDCODED FOR TESTING - Remove after verification
+const API_BASE_URL = "https://berenda-backend-ow7d.onrender.com/api";
 
 interface Message {
   id: string;
@@ -33,7 +35,6 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize welcome message based on language
   useEffect(() => {
     setMessages([
       {
@@ -80,8 +81,6 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
 
     try {
       const token = localStorage.getItem("token");
-      console.log("🔑 AI Chat - Token exists:", !!token);
-      console.log("🌐 AI Chat - API_BASE_URL:", API_BASE_URL);
       
       if (!token) {
         throw new Error("Not authenticated");
@@ -94,10 +93,7 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
         setConversationId(cid);
       }
 
-      const url = `${API_BASE_URL}/ai/chat`;
-      console.log("📡 AI Chat - Fetching URL:", url);
-      
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE_URL}/ai/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -110,28 +106,23 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
         }),
       });
 
-      console.log("📥 AI Chat - Response status:", response.status);
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ AI Chat - Error response:", errorText);
         throw new Error(`Failed to get AI response: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log("✅ AI Chat - Success response:", data);
       
       setMessages(prev => [
         ...prev,
         {
-          id: data.id || `ai-${Date.now()}`,
+          id: data.id,
           message: data.message,
           isAi: true,
-          createdAt: new Date(data.createdAt || Date.now()),
+          createdAt: new Date(data.createdAt),
         },
       ]);
     } catch (error) {
-      console.error("❌ AI Chat - Error sending message:", error);
+      console.error("Error sending message:", error);
       setMessages(prev => [
         ...prev,
         {
@@ -209,7 +200,6 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
       />
       
       <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl z-50 flex flex-col animate-slideUp overflow-hidden">
-        {/* Header - Brand Red */}
         <div className="flex items-center justify-between p-4 border-b bg-red-600">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
@@ -243,7 +233,6 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
           </div>
         </div>
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
           {messages.map((msg) => (
             <div
@@ -292,7 +281,6 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
         <div className="p-4 border-t bg-white">
           <div className="flex gap-2">
             <input
