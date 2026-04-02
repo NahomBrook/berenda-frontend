@@ -43,7 +43,7 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
         createdAt: new Date(),
       },
     ]);
-  }, [language]); // Re-run when language changes
+  }, [language]);
 
   useEffect(() => {
     if (isOpen && !isMinimized && inputRef.current) {
@@ -80,6 +80,9 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
 
     try {
       const token = localStorage.getItem("token");
+      console.log("🔑 AI Chat - Token exists:", !!token);
+      console.log("🌐 AI Chat - API_BASE_URL:", API_BASE_URL);
+      
       if (!token) {
         throw new Error("Not authenticated");
       }
@@ -91,8 +94,10 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
         setConversationId(cid);
       }
 
-      // Send language preference to backend
-      const response = await fetch(`${API_BASE_URL}/ai/chat`, {
+      const url = `${API_BASE_URL}/ai/chat`;
+      console.log("📡 AI Chat - Fetching URL:", url);
+      
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -105,21 +110,28 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to get AI response");
+      console.log("📥 AI Chat - Response status:", response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ AI Chat - Error response:", errorText);
+        throw new Error(`Failed to get AI response: ${response.status}`);
+      }
 
       const data = await response.json();
+      console.log("✅ AI Chat - Success response:", data);
       
       setMessages(prev => [
         ...prev,
         {
-          id: data.id,
+          id: data.id || `ai-${Date.now()}`,
           message: data.message,
           isAi: true,
-          createdAt: new Date(data.createdAt),
+          createdAt: new Date(data.createdAt || Date.now()),
         },
       ]);
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("❌ AI Chat - Error sending message:", error);
       setMessages(prev => [
         ...prev,
         {
@@ -160,7 +172,6 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
       if (token) {
         sessionStorage.removeItem("aiConversationId");
         setConversationId("");
-        // Fire-and-forget backend conversation clear
         fetch(`${API_BASE_URL}/ai/chat/history`, {
           method: "DELETE",
           headers: {
