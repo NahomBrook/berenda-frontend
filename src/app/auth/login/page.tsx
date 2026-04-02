@@ -18,23 +18,20 @@ export default function LoginPage() {
 
   // Handle redirect based on user role
   const handleRedirect = useCallback((user: any) => {
-    console.log("User from login:", user); // Debug log
+    console.log("User from login:", user);
     
-    // Check if user has admin role
-    const isAdmin = user.roles?.some(
+    const isAdmin = user?.roles?.some(
       (r: any) => r.name === "ADMIN" || r.name === "SUPER_ADMIN"
     );
     
     if (isAdmin) {
-      console.log("Redirecting to admin dashboard");
       router.push("/admin");
     } else {
-      console.log("Redirecting to homepage");
       router.push("/");
     }
   }, [router]);
 
-  // Handle the Backend Exchange
+  // Handle Google OAuth callback
   const handleGoogleCallback = useCallback(async (response: any) => {
     const idToken = response?.credential;
     if (!idToken) return setError(t("common.error"));
@@ -46,7 +43,7 @@ export default function LoginPage() {
         body: JSON.stringify({ idToken }),
       });
       const result = await res.json();
-      console.log("Google login response:", result); // Debug log
+      console.log("Google login response:", result);
       
       if (!res.ok) throw new Error(result.message || "Google login failed");
       
@@ -81,53 +78,28 @@ export default function LoginPage() {
     }
   }, [handleGoogleCallback]);
 
-  // In your login page, when storing user:
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError("");
-  setLoading(true);
-  try {
-    const response = await loginUser(email, password);
-    console.log("Login response:", response);
-    
-    let user = response;
-    let token = response.token;
-    
-    // Handle different response formats
-    if (response.data) {
-      user = response.data.user;
-      token = response.data.token;
-    } else if (response.user) {
-      user = response.user;
-      token = response.token;
-    }
-    
-    if (user && token) {
-      // Store properly
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      console.log("Stored user:", user); // Debug
+  // Handle email/password login
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      // loginUser now returns the user object and stores token internally
+      const user = await loginUser(email, password);
+      console.log("Login successful, user:", user);
       
-      // Redirect based on role
-      const isAdmin = user.roles?.some(
-        (r: any) => r.name === "ADMIN" || r.name === "SUPER_ADMIN"
-      );
-      
-      if (isAdmin) {
-        router.push("/admin");
+      if (user) {
+        handleRedirect(user);
       } else {
-        router.push("/");
+        throw new Error("Invalid response from server");
       }
-    } else {
-      throw new Error("Invalid response from server");
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err?.message || t("common.error"));
+    } finally {
+      setLoading(false);
     }
-  } catch (err: any) {
-    console.error("Login error:", err);
-    setError(err?.message || t("common.error"));
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <>
