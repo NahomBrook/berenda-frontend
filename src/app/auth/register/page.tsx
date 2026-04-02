@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoaded, setGoogleLoaded] = useState(false);
 
   // Handle redirect after successful registration/login
   const handleRedirect = useCallback((user: any) => {
@@ -73,6 +74,8 @@ export default function RegisterPage() {
     const google = (window as any).google;
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
+    console.log("Initializing Google with clientId:", clientId);
+    
     if (google && google.accounts && google.accounts.id && clientId) {
       google.accounts.id.initialize({
         client_id: clientId,
@@ -88,9 +91,26 @@ export default function RegisterPage() {
           text: "continue_with",
           shape: "rectangular",
         });
+        setGoogleLoaded(true);
+      } else {
+        console.log("Google button element not found");
       }
+    } else {
+      console.log("Google not available yet, clientId:", clientId);
     }
   }, [handleGoogleCallback]);
+
+  // Fallback: initialize Google if script doesn't trigger
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const google = (window as any).google;
+      if (google && !googleLoaded) {
+        console.log("Fallback initializing Google");
+        initializeGoogle();
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [initializeGoogle, googleLoaded]);
 
   // Handle email/password registration
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,12 +122,10 @@ export default function RegisterPage() {
     
     setLoading(true);
     try {
-      // registerUser now returns the user object and stores token internally
       const user = await registerUser(fullName, email, password);
       console.log("Registration successful, user:", user);
       
       if (user) {
-        // The token is already stored in localStorage by registerUser
         handleRedirect(user);
       } else {
         throw new Error("Invalid response from server");
@@ -126,6 +144,7 @@ export default function RegisterPage() {
         src="https://accounts.google.com/gsi/client"
         strategy="afterInteractive"
         onLoad={initializeGoogle}
+        onError={() => console.log("Google script failed to load")}
       />
       
       <Navbar />
