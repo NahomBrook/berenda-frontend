@@ -11,21 +11,39 @@ export const API_BASE_URL =
 // -------------------- AUTH --------------------
 
 export async function registerUser(fullName: string, email: string, password: string) {
-  const res = await fetch(`${API_BASE_URL}/auth/register`, {
+  // Step 1: Register the user
+  const registerRes = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fullName, email, password }),
   });
 
-  const responseData = await res.json().catch(() => ({}));
+  const registerData = await registerRes.json().catch(() => ({}));
 
-  if (!res.ok) {
-    // This catches the Prisma Unique Constraint error or any other backend error
-    throw new Error(responseData.message || "Registration failed");
+  if (!registerRes.ok) {
+    throw new Error(registerData.message || "Registration failed");
   }
 
-  // Safely handle different response structures
-  const data = responseData.data || responseData;
+  console.log("Registration successful:", registerData);
+
+  // Step 2: Auto-login after successful registration
+  const loginRes = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const loginData = await loginRes.json().catch(() => ({}));
+
+  if (!loginRes.ok) {
+    // If auto-login fails, redirect to login page
+    console.warn("Auto-login failed, redirecting to login page");
+    window.location.href = "/auth/login";
+    throw new Error("Registration successful! Please log in.");
+  }
+
+  // Extract token and user from login response
+  const data = loginData.data || loginData;
   
   if (data?.token) {
     localStorage.setItem("token", data.token);
@@ -33,6 +51,8 @@ export async function registerUser(fullName: string, email: string, password: st
   if (data?.user) {
     localStorage.setItem("user", JSON.stringify(data.user));
   }
+  
+  console.log("Auto-login successful:", data?.user);
   
   return data?.user;
 }
