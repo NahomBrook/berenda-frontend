@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleInitialized, setGoogleInitialized] = useState(false);
 
   // Handle redirect based on user role
   const handleRedirect = useCallback((user: any) => {
@@ -33,15 +34,26 @@ export default function LoginPage() {
 
   // Handle Google OAuth callback
   const handleGoogleCallback = useCallback(async (response: any) => {
+    console.log("🔑 Google callback received:", response);
+    
     const idToken = response?.credential;
-    if (!idToken) return setError(t("common.error"));
+    if (!idToken) {
+      console.error("❌ No credential in Google response");
+      setError("Google authentication failed");
+      return;
+    }
+    
+    console.log("✅ ID Token received (first 20 chars):", idToken.substring(0, 20));
     setLoading(true);
+    
     try {
+      console.log("📡 Sending token to backend:", `${API_BASE_URL}/auth/google`);
       const res = await fetch(`${API_BASE_URL}/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
       });
+      
       const result = await res.json();
       console.log("Google login response:", result);
       
@@ -64,19 +76,53 @@ export default function LoginPage() {
   const initializeGoogle = useCallback(() => {
     const google = (window as any).google;
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
+    
+    console.log("🔧 Initializing Google...");
+    console.log("Google object exists:", !!google);
+    console.log("Client ID:", clientId);
+    
     if (google && google.accounts && google.accounts.id && clientId) {
       google.accounts.id.initialize({
         client_id: clientId,
         callback: handleGoogleCallback,
         auto_select: false,
       });
-      google.accounts.id.renderButton(
-        document.getElementById("g_id_signin"),
-        { theme: "outline", size: "large" }
-      );
+      
+      const buttonElement = document.getElementById("g_id_signin");
+      console.log("Button element found:", !!buttonElement);
+      
+      if (buttonElement) {
+        google.accounts.id.renderButton(buttonElement, {
+          theme: "outline",
+          size: "large",
+          text: "continue_with",
+          shape: "rectangular",
+        });
+        setGoogleInitialized(true);
+        console.log("✅ Google button rendered");
+      } else {
+        console.error("❌ Button element 'g_id_signin' not found");
+      }
+    } else {
+      console.error("❌ Google or clientId missing");
+      if (!google) console.error("  - google object missing");
+      if (!clientId) console.error("  - clientId missing");
     }
   }, [handleGoogleCallback]);
+
+  // Fallback initialization
+  useEffect(() => {
+    if (!googleInitialized) {
+      const timer = setTimeout(() => {
+        const google = (window as any).google;
+        if (google && !googleInitialized) {
+          console.log("🔄 Fallback: Initializing Google");
+          initializeGoogle();
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [initializeGoogle, googleInitialized]);
 
   // Handle email/password login
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,7 +130,6 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      // loginUser now returns the user object and stores token internally
       const user = await loginUser(email, password);
       console.log("Login successful, user:", user);
       
@@ -106,7 +151,11 @@ export default function LoginPage() {
       <Script
         src="https://accounts.google.com/gsi/client"
         strategy="afterInteractive"
-        onLoad={initializeGoogle}
+        onLoad={() => {
+          console.log("📚 Google script loaded");
+          initializeGoogle();
+        }}
+        onError={() => console.error("❌ Google script failed to load")}
       />
 
       <Navbar />
