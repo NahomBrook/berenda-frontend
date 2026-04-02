@@ -4,10 +4,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Bot, Send, X, Sparkles, Loader2, Minimize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { API_BASE_URL } from "@/utils/api";
 import { useLanguage } from "../../context/LanguageContext";
-
-// HARDCODED FOR TESTING - Remove after verification
-const API_BASE_URL = "https://berenda-backend-ow7d.onrender.com/api";
 
 interface Message {
   id: string;
@@ -80,12 +78,7 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
     setIsTyping(true);
 
     try {
-      const token = localStorage.getItem("token");
-      
-      if (!token) {
-        throw new Error("Not authenticated");
-      }
-
+      // No token required - allow anonymous users
       let cid = conversationId;
       if (!cid) {
         cid = `ai-session-${Date.now()}`;
@@ -97,7 +90,6 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ 
           message: userMessage, 
@@ -106,19 +98,17 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to get AI response: ${response.status}`);
-      }
+      if (!response.ok) throw new Error("Failed to get AI response");
 
       const data = await response.json();
       
       setMessages(prev => [
         ...prev,
         {
-          id: data.id,
+          id: data.id || `ai-${Date.now()}`,
           message: data.message,
           isAi: true,
-          createdAt: new Date(data.createdAt),
+          createdAt: new Date(data.createdAt || Date.now()),
         },
       ]);
     } catch (error) {
@@ -159,19 +149,8 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
       },
     ]);
     try {
-      const token = localStorage.getItem("token");
-      if (token) {
-        sessionStorage.removeItem("aiConversationId");
-        setConversationId("");
-        fetch(`${API_BASE_URL}/ai/chat/history`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ conversationId: conversationId || undefined }),
-        }).catch(() => undefined);
-      }
+      sessionStorage.removeItem("aiConversationId");
+      setConversationId("");
     } catch {
       // ignore
     }
