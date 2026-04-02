@@ -1,10 +1,15 @@
 // frontend/src/utils/api.ts
-// Centralize backend base URL for all API calls.
-// In Next.js, NEXT_PUBLIC_* vars are inlined at build time for client components.
+
+/**
+ * Centralize backend base URL for all API calls.
+ * NEXT_PUBLIC_ vars are inlined by Next.js at build time.
+ * Fallback is localhost for your development workflow.
+ */
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 // -------------------- AUTH --------------------
+
 export async function registerUser(fullName: string, email: string, password: string) {
   const res = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
@@ -12,23 +17,24 @@ export async function registerUser(fullName: string, email: string, password: st
     body: JSON.stringify({ fullName, email, password }),
   });
 
+  const responseData = await res.json().catch(() => ({}));
+
   if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message || "Registration failed");
+    // This catches the Prisma Unique Constraint error or any other backend error
+    throw new Error(responseData.message || "Registration failed");
   }
 
-  const response = await res.json();
-  // Handle both response formats (direct or nested under 'data')
-  const data = response.data || response;
+  // Safely handle different response structures
+  const data = responseData.data || responseData;
   
-  if (data.token) {
+  if (data?.token) {
     localStorage.setItem("token", data.token);
   }
-  if (data.user) {
+  if (data?.user) {
     localStorage.setItem("user", JSON.stringify(data.user));
   }
   
-  return data.user;
+  return data?.user;
 }
 
 export async function loginUser(email: string, password: string) {
@@ -38,26 +44,26 @@ export async function loginUser(email: string, password: string) {
     body: JSON.stringify({ email, password }),
   });
 
+  const responseData = await res.json().catch(() => ({}));
+
   if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message || "Login failed");
+    throw new Error(responseData.message || "Login failed");
   }
 
-  const response = await res.json();
-  // Handle both response formats (direct or nested under 'data')
-  const data = response.data || response;
+  const data = responseData.data || responseData;
   
-  if (data.token) {
+  if (data?.token) {
     localStorage.setItem("token", data.token);
   }
-  if (data.user) {
+  if (data?.user) {
     localStorage.setItem("user", JSON.stringify(data.user));
   }
   
-  return data.user;
+  return data?.user;
 }
 
 // -------------------- PROPERTIES --------------------
+
 export async function createProperty(propertyData: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Not authenticated");
@@ -71,24 +77,26 @@ export async function createProperty(propertyData: any) {
     body: JSON.stringify(propertyData),
   });
 
+  const responseData = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message || "Failed to create property");
+    throw new Error(responseData.message || "Failed to create property");
   }
 
-  return await res.json();
+  return responseData;
 }
 
 export async function getProperties() {
   const res = await fetch(`${API_BASE_URL}/properties`);
-  if (!res.ok) throw new Error("Failed to fetch properties");
-  return await res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Failed to fetch properties");
+  return data;
 }
 
 export async function getPropertyById(id: string) {
   const res = await fetch(`${API_BASE_URL}/properties/${id}`);
-  if (!res.ok) throw new Error("Failed to fetch property");
-  return await res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Failed to fetch property");
+  return data;
 }
 
 export async function updateProperty(id: string, updateData: any) {
@@ -104,12 +112,10 @@ export async function updateProperty(id: string, updateData: any) {
     body: JSON.stringify(updateData),
   });
 
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message || "Failed to update property");
-  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Failed to update property");
 
-  return await res.json();
+  return data;
 }
 
 export async function deleteProperty(id: string) {
@@ -121,15 +127,14 @@ export async function deleteProperty(id: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message || "Failed to delete property");
-  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Failed to delete property");
 
-  return await res.json();
+  return data;
 }
 
 // -------------------- BOOKINGS --------------------
+
 export async function createBooking(propertyId: string, checkIn: string, checkOut: string) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Not authenticated");
@@ -143,15 +148,14 @@ export async function createBooking(propertyId: string, checkIn: string, checkOu
     body: JSON.stringify({ propertyId, checkIn, checkOut }),
   });
 
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message || "Booking failed");
-  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Booking failed");
 
-  return await res.json();
+  return data;
 }
 
 // -------------------- UPLOAD IMAGES --------------------
+
 export async function uploadPropertyImages(propertyId: string, files: File[]) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Not authenticated");
@@ -165,15 +169,13 @@ export async function uploadPropertyImages(propertyId: string, files: File[]) {
     body: formData,
   });
 
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message || "Failed to upload images");
-  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Failed to upload images");
 
-  return await res.json();
+  return data;
 }
 
-// ==================== ELIGIBILITY CHECK FUNCTION ====================
+// ==================== ELIGIBILITY CHECK ====================
 
 export interface EligibilityCheckData {
   checkIn: string;
@@ -192,24 +194,16 @@ export interface EligibilityResult {
   };
 }
 
-/**
- * Check if a property is available/eligible for booking on specific dates
- * @param propertyId - The ID of the property
- * @param data - Check-in date, check-out date, and number of guests
- * @returns Eligibility result with price information if available
- */
 export async function checkPropertyEligibility(
   propertyId: string, 
   data: EligibilityCheckData
 ): Promise<EligibilityResult> {
   const token = localStorage.getItem("token");
   
-  // Build headers
   const headers: HeadersInit = {
     "Content-Type": "application/json",
   };
   
-  // Add token if available (for authenticated users)
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -228,20 +222,17 @@ export async function checkPropertyEligibility(
     const responseData = await res.json();
 
     if (!res.ok) {
-      // Return a structured eligibility result instead of throwing
       return {
         eligible: false,
         message: responseData.message || "Property not available for selected dates",
       };
     }
 
-    // Calculate price information if property data is available
-    // You might need to fetch property details separately or have the backend return price info
     return {
       eligible: true,
       message: "Property is available!",
       availableDates: responseData.availableDates,
-      price: responseData.price, // If your backend returns price info
+      price: responseData.price,
     };
   } catch (error) {
     console.error("Error checking eligibility:", error);
@@ -252,45 +243,32 @@ export async function checkPropertyEligibility(
   }
 }
 
-// ==================== OPTIONAL: ADDITIONAL HELPER FUNCTIONS ====================
+// ==================== ADDITIONAL HELPERS ====================
 
-/**
- * Get available dates for a property
- * @param propertyId - The ID of the property
- * @param month - Optional month to check (YYYY-MM format)
- * @returns Array of available date ranges
- */
 export async function getPropertyAvailability(propertyId: string, month?: string) {
   const url = month 
     ? `${API_BASE_URL}/properties/${propertyId}/availability?month=${month}`
     : `${API_BASE_URL}/properties/${propertyId}/availability`;
   
   const res = await fetch(url);
+  const data = await res.json().catch(() => ({}));
   
   if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message || "Failed to fetch availability");
+    throw new Error(data.message || "Failed to fetch availability");
   }
   
-  return await res.json();
+  return data;
 }
 
-/**
- * Calculate total price for a booking
- * @param propertyId - The ID of the property
- * @param checkIn - Check-in date
- * @param checkOut - Check-out date
- * @returns Price calculation
- */
 export async function calculateBookingPrice(propertyId: string, checkIn: string, checkOut: string) {
   const res = await fetch(
     `${API_BASE_URL}/properties/${propertyId}/calculate-price?checkIn=${checkIn}&checkOut=${checkOut}`
   );
+  const data = await res.json().catch(() => ({}));
   
   if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message || "Failed to calculate price");
+    throw new Error(data.message || "Failed to calculate price");
   }
   
-  return await res.json();
+  return data;
 }
