@@ -295,4 +295,4 @@ export async function calculateBookingPrice(propertyId: string, checkIn: string,
   }
   
   return data;
-}
+}// Build timestamp: Thu Apr  2 20:03:55 EAT 2026
