@@ -20,7 +20,8 @@ export default function RegisterPage() {
 
   // Handle redirect after successful registration/login
   const handleRedirect = useCallback((user: any) => {
-    const isAdmin = user.roles?.some(
+    console.log("Redirecting user:", user);
+    const isAdmin = user?.roles?.some(
       (r: any) => r.name === "ADMIN" || r.name === "SUPER_ADMIN"
     );
     
@@ -79,7 +80,6 @@ export default function RegisterPage() {
         auto_select: false,
       });
       
-      // Render the Google button
       const buttonElement = document.getElementById("google-signin-button");
       if (buttonElement) {
         google.accounts.id.renderButton(buttonElement, {
@@ -102,23 +102,12 @@ export default function RegisterPage() {
     
     setLoading(true);
     try {
-      const response = await registerUser(fullName, email, password);
-      console.log("Register response:", response);
+      // registerUser now returns the user object and stores token internally
+      const user = await registerUser(fullName, email, password);
+      console.log("Registration successful, user:", user);
       
-      let user = response;
-      let token = response.token;
-      
-      if (response.data) {
-        user = response.data.user;
-        token = response.data.token;
-      } else if (response.user) {
-        user = response.user;
-        token = response.token;
-      }
-      
-      if (user && token) {
-        localStorage.setItem("token", token);
-        localStorage.setItem("user", JSON.stringify(user));
+      if (user) {
+        // The token is already stored in localStorage by registerUser
         handleRedirect(user);
       } else {
         throw new Error("Invalid response from server");
@@ -208,7 +197,6 @@ export default function RegisterPage() {
               <div className="flex-grow border-t border-gray-300"></div>
             </div>
             
-            {/* Google Sign-In Button */}
             <div id="google-signin-button" className="w-full flex justify-center mt-2"></div>
           </div>
 
