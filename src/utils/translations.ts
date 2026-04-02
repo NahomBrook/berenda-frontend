@@ -13,6 +13,7 @@ export const translations = {
     "nav.register": "Register",
     "nav.logout": "Logout",
     "nav.dashboard": "Dashboard",
+    "nav.messages": "Messages",
 
     // Common
     "common.loading": "Loading...",
@@ -32,6 +33,12 @@ export const translations = {
     "common.next": "Next",
     "common.submit": "Submit",
     "common.confirm": "Confirm",
+    "common.upload": "Upload",
+    "common.download": "Download",
+    "common.refresh": "Refresh",
+    "common.loadMore": "Load More",
+    "common.noResults": "No results found",
+    "common.required": "Required",
 
     // Properties
     "properties.title": "Find Your Perfect Property",
@@ -75,53 +82,7 @@ export const translations = {
     "host.bookings": "Bookings",
     "host.analytics": "Analytics",
 
-    // Auth
-    "auth.login.title": "Login to Your Account",
-    "auth.login.email": "Email Address",
-    "auth.login.password": "Password",
-    "auth.login.button": "Login",
-    "auth.login.forgot": "Forgot Password?",
-    "auth.login.noAccount": "Don't have an account?",
-    "auth.register.title": "Create an Account",
-    "auth.register.fullName": "Full Name",
-    "auth.register.email": "Email Address",
-    "auth.register.password": "Password",
-    "auth.register.confirmPassword": "Confirm Password",
-    "auth.register.button": "Register",
-    "auth.register.haveAccount": "Already have an account?",
-
-    // AI Chat
-    "ai.title": "AI Assistant",
-    "ai.subtitle": "Always here to help",
-    "ai.placeholder": "Ask me anything...",
-    "ai.tip": "💡 Try asking about properties, bookings, or hosting",
-    "ai.clear": "Clear",
-    "ai.typing": "Assistant is typing...",
-    "ai.welcome": "👋 **Hello!** I'm your Berenda AI Assistant.\n\nI can help you find properties, make bookings, answer questions about hosting, and more!\n\nWhat would you like to know?",
-    "ai.error": "Sorry, I'm having trouble connecting. Please try again later.",
-
-    // Footer
-    "footer.about": "About Berenda",
-    "footer.contact": "Contact Us",
-    "footer.privacy": "Privacy Policy",
-    "footer.terms": "Terms of Service",
-    "footer.copyright": "© 2024 Berenda. All rights reserved.",
-
-    // Languages
-    "language.english": "English",
-    "language.amharic": "አማርኛ",
-    // Profile
-    "profile.title": "My Dashboard",
-    "profile.subtitle": "Manage your profile, bookings, and preferences",
-    "profile.tab.profile": "Profile",
-    "profile.tab.bookings": "Bookings",
-    "profile.tab.wishlist": "Wishlist",
-    "profile.tab.settings": "Settings",
-    "profile.editProfile": "Edit Profile",
-    "profile.saveChanges": "Save Changes",
-    "profile.startExploring": "Start exploring properties →",
-
-    // Host create
+    // Host Create Form
     "host.section.basic": "Basic Information",
     "host.section.details": "Property Details",
     "host.section.location": "Location",
@@ -139,6 +100,86 @@ export const translations = {
     "host.button.list": "List Property",
     "host.button.creating": "Creating Property...",
     "host.error.selectLocation": "Please select your property location by clicking on the map",
+
+    // Auth
+    "auth.login.title": "Login to Your Account",
+    "auth.login.email": "Email Address",
+    "auth.login.password": "Password",
+    "auth.login.button": "Login",
+    "auth.login.forgot": "Forgot Password?",
+    "auth.login.noAccount": "Don't have an account?",
+    "auth.register.title": "Create an Account",
+    "auth.register.fullName": "Full Name",
+    "auth.register.email": "Email Address",
+    "auth.register.password": "Password",
+    "auth.register.confirmPassword": "Confirm Password",
+    "auth.register.button": "Register",
+    "auth.register.haveAccount": "Already have an account?",
+    "auth.register.agree": "I agree to the Terms & Conditions",
+    "auth.register.termsMissing": "You must agree to terms and conditions.",
+
+    // AI Chat
+    "ai.title": "AI Assistant",
+    "ai.subtitle": "Always here to help",
+    "ai.placeholder": "Ask me anything...",
+    "ai.tip": "💡 Try asking about properties, bookings, or hosting",
+    "ai.clear": "Clear",
+    "ai.typing": "Assistant is typing...",
+    "ai.welcome": "👋 **Hello!** I'm your Berenda AI Assistant.\n\nI can help you find properties, make bookings, answer questions about hosting, and more!\n\nWhat would you like to know?",
+    "ai.error": "Sorry, I'm having trouble connecting. Please try again later.",
+
+    // Payment
+    "payment.title": "Payment",
+    "payment.method": "Payment Method",
+    "payment.amount": "Amount",
+    "payment.status": "Payment Status",
+    "payment.success": "Payment Successful",
+    "payment.failed": "Payment Failed",
+    "payment.pending": "Processing Payment",
+    "payment.telebirr": "Telebirr",
+    "payment.cbe": "CBE Birr",
+    "payment.card": "Card",
+    "payment.bank": "Bank Transfer",
+
+    // Messages / Chat
+    "message.noMessages": "No messages yet",
+    "message.typeHere": "Type your message...",
+    "message.send": "Send",
+    "message.newMessage": "New Message",
+
+    // Profile
+    "profile.title": "My Dashboard",
+    "profile.subtitle": "Manage your profile, bookings, and preferences",
+    "profile.tab.profile": "Profile",
+    "profile.tab.bookings": "Bookings",
+    "profile.tab.wishlist": "Wishlist",
+    "profile.tab.settings": "Settings",
+    "profile.editProfile": "Edit Profile",
+    "profile.saveChanges": "Save Changes",
+    "profile.startExploring": "Start exploring properties →",
+
+    // Admin
+    "admin.title": "Admin Dashboard",
+    "admin.users": "User Management",
+    "admin.properties": "Property Management",
+    "admin.bookings": "Booking Management",
+    "admin.stats": "Statistics",
+    "admin.totalUsers": "Total Users",
+    "admin.totalProperties": "Total Properties",
+    "admin.totalBookings": "Total Bookings",
+    "admin.pendingProperties": "Pending Properties",
+    "admin.totalRevenue": "Total Revenue",
+
+    // Footer
+    "footer.about": "About Berenda",
+    "footer.contact": "Contact Us",
+    "footer.privacy": "Privacy Policy",
+    "footer.terms": "Terms of Service",
+    "footer.copyright": "© 2024 Berenda. All rights reserved.",
+
+    // Languages
+    "language.english": "English",
+    "language.amharic": "አማርኛ",
   },
   am: {
     // Navigation
@@ -151,6 +192,7 @@ export const translations = {
     "nav.register": "ተመዝገብ",
     "nav.logout": "ውጣ",
     "nav.dashboard": "ዳሽቦርድ",
+    "nav.messages": "መልዕክቶች",
 
     // Common
     "common.loading": "በመጫን ላይ...",
@@ -170,6 +212,12 @@ export const translations = {
     "common.next": "ቀጥል",
     "common.submit": "አስገባ",
     "common.confirm": "አረጋግጥ",
+    "common.upload": "ስቀምጥ",
+    "common.download": "አውርድ",
+    "common.refresh": "አድስ",
+    "common.loadMore": "ተጨማሪ ጫን",
+    "common.noResults": "ምንም ውጤት አልተገኘም",
+    "common.required": "አስፈላጊ",
 
     // Properties
     "properties.title": "ተስማሚ ንብረትህን ፈልግ",
@@ -204,6 +252,7 @@ export const translations = {
 
     // Host Dashboard
     "host.title": "የአስተናጋጅ ዳሽቦርድ",
+    "host.create.title": "ንብረትዎን ይማሩ",
     "host.properties": "ንብረቶቼ",
     "host.addProperty": "አዲስ ንብረት ጨምር",
     "host.editProperty": "ንብረት አርትዕ",
@@ -212,54 +261,7 @@ export const translations = {
     "host.bookings": "ቦኪንጎች",
     "host.analytics": "ትንታኔ",
 
-    // Auth
-    "auth.login.title": "ወደ መለያዎ ይግቡ",
-    "auth.login.email": "ኢሜይል አድራሻ",
-    "auth.login.password": "የይለፍ ቃል",
-    "auth.login.button": "ግባ",
-    "auth.login.forgot": "የይለፍ ቃል ረሳሁት?",
-    "auth.login.noAccount": "መለያ የለህም?",
-    "auth.register.title": "መለያ ፍጠር",
-    "auth.register.fullName": "ሙሉ ስም",
-    "auth.register.email": "ኢሜይል አድራሻ",
-    "auth.register.password": "የይለፍ ቃል",
-    "auth.register.confirmPassword": "የይለፍ ቃል አረጋግጥ",
-    "auth.register.button": "ተመዝገብ",
-    "auth.register.haveAccount": "መለያ አለህ?",
-
-    // AI Chat
-    "ai.title": "ኤአይ ረዳት",
-    "ai.subtitle": "ሁልጊዜ ለመርዳት ዝግጁ",
-    "ai.placeholder": "ማንኛውንም ነገር ጠይቀኝ...",
-    "ai.tip": "💡 ስለ ንብረቶች፣ ቦኪንግ ወይም ሆስቲንግ ለመጠየቅ ሞክር",
-    "ai.clear": "አጽዳ",
-    "ai.typing": "ረዳት እየጻፈ ነው...",
-    "ai.welcome": "👋 **ሰላም!** እኔ የቤረንዳ ኤአይ ረዳት ነኝ።\n\nንብረቶችን ለማግኘት፣ ቦኪንግ ለማድረግ፣ ስለ ሆስቲንግ ጥያቄዎችን ለመመለስ እና ሌሎችንም ላግዝህ እችላለሁ!\n\nምን መርዳት ትፈልጋለህ?",
-    "ai.error": "ይቅርታ፣ ለመገናኘት ችግር አጋጥሞኛል። እባክህ ቆይተህ እንደገና ሞክር።",
-
-    // Footer
-    "footer.about": "ስለ ቤረንዳ",
-    "footer.contact": "አግኙን",
-    "footer.privacy": "የግላዊነት ፖሊሲ",
-    "footer.terms": "የአገልግሎት ውሎች",
-    "footer.copyright": "© 2024 ቤረንዳ። ሁሉም መብቶች ተጠብቀዋል።",
-
-    // Languages
-    "language.english": "English",
-    "language.amharic": "አማርኛ",
-    // Profile
-    "profile.title": "የኔ ዳሽቦርድ",
-    "profile.subtitle": "መገለጫዎን፣ ቦኪንጎችን እና ከፍተኛ ቅድሚያዎችን ያስተካክሉ",
-    "profile.tab.profile": "መገለጫ",
-    "profile.tab.bookings": "ቦኪንጎች",
-    "profile.tab.wishlist": "የፍለጋ ዝርዝር",
-    "profile.tab.settings": "ቅንብሮች",
-    "profile.editProfile": "መገለጫን አርትዕ",
-    "profile.saveChanges": "ለውጦችን አስቀምጥ",
-    "profile.startExploring": "ንብረቶችን መፈለግ ይጀምሩ →",
-
-    // Host create
-    "host.create.title": "ንብረትዎን ይማሩ",
+    // Host Create Form
     "host.section.basic": "መሠረታዊ መረጃ",
     "host.section.details": "የንብረት ዝርዝሮች",
     "host.section.location": "አካባቢ",
@@ -277,5 +279,85 @@ export const translations = {
     "host.button.list": "ንብረት ይመዝግቡ",
     "host.button.creating": "ንብረት እየፈጠረ...",
     "host.error.selectLocation": "እባክዎ ካርታውን ጠቅ በማድረግ አካባቢውን ይምረጡ",
+
+    // Auth
+    "auth.login.title": "ወደ መለያዎ ይግቡ",
+    "auth.login.email": "ኢሜይል አድራሻ",
+    "auth.login.password": "የይለፍ ቃል",
+    "auth.login.button": "ግባ",
+    "auth.login.forgot": "የይለፍ ቃል ረሳሁት?",
+    "auth.login.noAccount": "መለያ የለህም?",
+    "auth.register.title": "መለያ ፍጠር",
+    "auth.register.fullName": "ሙሉ ስም",
+    "auth.register.email": "ኢሜይል አድራሻ",
+    "auth.register.password": "የይለፍ ቃል",
+    "auth.register.confirmPassword": "የይለፍ ቃል አረጋግጥ",
+    "auth.register.button": "ተመዝገብ",
+    "auth.register.haveAccount": "መለያ አለህ?",
+    "auth.register.agree": "ውሎችን እና መመሪያዎችን ተቀብያለሁ",
+    "auth.register.termsMissing": "ውሎችን እና መመሪያዎችን መስማማት አለብዎት",
+
+    // AI Chat
+    "ai.title": "ኤአይ ረዳት",
+    "ai.subtitle": "ሁልጊዜ ለመርዳት ዝግጁ",
+    "ai.placeholder": "ማንኛውንም ነገር ጠይቀኝ...",
+    "ai.tip": "💡 ስለ ንብረቶች፣ ቦኪንግ ወይም ሆስቲንግ ለመጠየቅ ሞክር",
+    "ai.clear": "አጽዳ",
+    "ai.typing": "ረዳት እየጻፈ ነው...",
+    "ai.welcome": "👋 **ሰላም!** እኔ የቤረንዳ ኤአይ ረዳት ነኝ።\n\nንብረቶችን ለማግኘት፣ ቦኪንግ ለማድረግ፣ ስለ ሆስቲንግ ጥያቄዎችን ለመመለስ እና ሌሎችንም ላግዝህ እችላለሁ!\n\nምን መርዳት ትፈልጋለህ?",
+    "ai.error": "ይቅርታ፣ ለመገናኘት ችግር አጋጥሞኛል። እባክህ ቆይተህ እንደገና ሞክር።",
+
+    // Payment
+    "payment.title": "ክፍያ",
+    "payment.method": "የክፍያ መንገድ",
+    "payment.amount": "የክፍያ መጠን",
+    "payment.status": "የክፍያ ሁኔታ",
+    "payment.success": "ክፍያ ተሳክቷል",
+    "payment.failed": "ክፍያ አልተሳካም",
+    "payment.pending": "ክፍያ በሂደት ላይ",
+    "payment.telebirr": "ቴሌብር",
+    "payment.cbe": "ሲቢኢ ብር",
+    "payment.card": "ካርድ",
+    "payment.bank": "የባንክ ዝውውር",
+
+    // Messages / Chat
+    "message.noMessages": "እስካሁን ምንም መልዕክት የለም",
+    "message.typeHere": "መልዕክትዎን ይጻፉ...",
+    "message.send": "ላክ",
+    "message.newMessage": "አዲስ መልዕክት",
+
+    // Profile
+    "profile.title": "የኔ ዳሽቦርድ",
+    "profile.subtitle": "መገለጫዎን፣ ቦኪንጎችን እና ከፍተኛ ቅድሚያዎችን ያስተካክሉ",
+    "profile.tab.profile": "መገለጫ",
+    "profile.tab.bookings": "ቦኪንጎች",
+    "profile.tab.wishlist": "የፍለጋ ዝርዝር",
+    "profile.tab.settings": "ቅንብሮች",
+    "profile.editProfile": "መገለጫን አርትዕ",
+    "profile.saveChanges": "ለውጦችን አስቀምጥ",
+    "profile.startExploring": "ንብረቶችን መፈለግ ይጀምሩ →",
+
+    // Admin
+    "admin.title": "የአስተዳዳሪ ዳሽቦርድ",
+    "admin.users": "የተጠቃሚዎች አስተዳደር",
+    "admin.properties": "የንብረቶች አስተዳደር",
+    "admin.bookings": "የቦኪንጎች አስተዳደር",
+    "admin.stats": "ስታቲስቲክስ",
+    "admin.totalUsers": "ጠቅላላ ተጠቃሚዎች",
+    "admin.totalProperties": "ጠቅላላ ንብረቶች",
+    "admin.totalBookings": "ጠቅላላ ቦኪንጎች",
+    "admin.pendingProperties": "በመጠባበቅ ላይ ያሉ ንብረቶች",
+    "admin.totalRevenue": "ጠቅላላ ገቢ",
+
+    // Footer
+    "footer.about": "ስለ ቤረንዳ",
+    "footer.contact": "አግኙን",
+    "footer.privacy": "የግላዊነት ፖሊሲ",
+    "footer.terms": "የአገልግሎት ውሎች",
+    "footer.copyright": "© 2024 ቤረንዳ። ሁሉም መብቶች ተጠብቀዋል።",
+
+    // Languages
+    "language.english": "English",
+    "language.amharic": "አማርኛ",
   }
 };

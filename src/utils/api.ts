@@ -293,3 +293,4 @@ export async function calculateBookingPrice(propertyId: string, checkIn: string,
   
   return data;
 }
+// Force redeploy: Thu Apr  2 20:28:12 EAT 2026
