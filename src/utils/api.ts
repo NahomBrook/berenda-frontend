@@ -1,10 +1,11 @@
 // src/utils/api.ts
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+// HARDCODED for production - Remove after Vercel env vars work
+export const API_BASE_URL = "https://berenda-backend-ow7d.onrender.com/api";
+// export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 // Helper to extract data from response
 function extractData(response: any) {
-  // Handle { status: 200, data: { ... } } format
   if (response.data) {
     return response.data;
   }
@@ -13,7 +14,6 @@ function extractData(response: any) {
 
 export async function registerUser(fullName: string, email: string, password: string) {
   try {
-    // Step 1: Register
     const registerRes = await fetch(`${API_BASE_URL}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -27,7 +27,6 @@ export async function registerUser(fullName: string, email: string, password: st
       throw new Error(registerData.message || "Registration failed");
     }
 
-    // Step 2: Auto-login to get token
     const loginRes = await fetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -38,12 +37,10 @@ export async function registerUser(fullName: string, email: string, password: st
     console.log("Login response:", loginData);
 
     if (!loginRes.ok) {
-      // Registration succeeded but auto-login failed
       window.location.href = "/auth/login";
       throw new Error("Registration successful! Please log in.");
     }
 
-    // Extract token and user from login response
     const loginResult = extractData(loginData);
     
     if (loginResult.token) {
@@ -295,4 +292,4 @@ export async function calculateBookingPrice(propertyId: string, checkIn: string,
   }
   
   return data;
-}// Build timestamp: Thu Apr  2 20:03:55 EAT 2026
+}
