@@ -14,6 +14,11 @@ function extractData(response: any) {
 
 export async function registerUser(fullName: string, email: string, password: string) {
   try {
+    // Validate inputs
+    if (!fullName || !email || !password) {
+      throw new Error("All fields are required");
+    }
+
     const registerRes = await fetch(`${API_BASE_URL}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -27,31 +32,8 @@ export async function registerUser(fullName: string, email: string, password: st
       throw new Error(registerData.message || "Registration failed");
     }
 
-    const loginRes = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const loginData = await loginRes.json();
-    console.log("Login response:", loginData);
-
-    if (!loginRes.ok) {
-      window.location.href = "/auth/login";
-      throw new Error("Registration successful! Please log in.");
-    }
-
-    const loginResult = extractData(loginData);
-    
-    if (loginResult.token) {
-      localStorage.setItem("token", loginResult.token);
-    }
-    if (loginResult.user) {
-      localStorage.setItem("user", JSON.stringify(loginResult.user));
-      return loginResult.user;
-    }
-    
-    throw new Error("Invalid response format from server");
+    // Registration successful - redirect to login page
+    return { success: true, message: "Registration successful! Please log in." };
   } catch (error: any) {
     console.error("Registration error:", error);
     throw error;
@@ -60,6 +42,11 @@ export async function registerUser(fullName: string, email: string, password: st
 
 export async function loginUser(email: string, password: string) {
   try {
+    // Validate inputs
+    if (!email || !password) {
+      throw new Error("Email and password are required");
+    }
+
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -70,14 +57,16 @@ export async function loginUser(email: string, password: string) {
     console.log("Login response:", data);
 
     if (!res.ok) {
-      throw new Error(data.message || "Login failed");
+      throw new Error(data.message || "Invalid email or password");
     }
 
     const result = extractData(data);
     
-    if (result.token) {
-      localStorage.setItem("token", result.token);
+    if (!result.token) {
+      throw new Error("No token received from server");
     }
+    
+    localStorage.setItem("token", result.token);
     if (result.user) {
       localStorage.setItem("user", JSON.stringify(result.user));
       return result.user;
@@ -293,4 +282,3 @@ export async function calculateBookingPrice(propertyId: string, checkIn: string,
   
   return data;
 }
-// Force redeploy: Thu Apr  2 20:28:12 EAT 2026

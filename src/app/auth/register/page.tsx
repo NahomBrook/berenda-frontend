@@ -1,3 +1,4 @@
+// frontend/src/app/auth/register/page.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -16,22 +17,9 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoaded, setGoogleLoaded] = useState(false);
-
-  // Handle redirect after successful registration/login
-  const handleRedirect = useCallback((user: any) => {
-    console.log("Redirecting user:", user);
-    const isAdmin = user?.roles?.some(
-      (r: any) => r.name === "ADMIN" || r.name === "SUPER_ADMIN"
-    );
-    
-    if (isAdmin) {
-      router.push("/admin");
-    } else {
-      router.push("/");
-    }
-  }, [router]);
 
   // Handle Google OAuth callback
   const handleGoogleCallback = useCallback(async (response: any) => {
@@ -42,6 +30,7 @@ export default function RegisterPage() {
     }
     
     setLoading(true);
+    setError("");
     try {
       const res = await fetch(`${API_BASE_URL}/auth/google`, {
         method: "POST",
@@ -59,7 +48,16 @@ export default function RegisterPage() {
       if (result.status === 200 && result.data) {
         localStorage.setItem("token", result.data.token);
         localStorage.setItem("user", JSON.stringify(result.data.user));
-        handleRedirect(result.data.user);
+        
+        const isAdmin = result.data.user?.roles?.some(
+          (r: any) => r.name === "ADMIN" || r.name === "SUPER_ADMIN"
+        );
+        
+        if (isAdmin) {
+          router.push("/admin");
+        } else {
+          router.push("/");
+        }
       }
     } catch (err: any) {
       console.error("Google auth error:", err);
@@ -67,7 +65,7 @@ export default function RegisterPage() {
     } finally {
       setLoading(false);
     }
-  }, [router, handleRedirect]);
+  }, [router]);
 
   // Initialize Google Sign-In
   const initializeGoogle = useCallback(() => {
@@ -121,15 +119,15 @@ export default function RegisterPage() {
     }
     
     setLoading(true);
+    setError("");
+    setSuccess("");
+    
     try {
-      const user = await registerUser(fullName, email, password);
-      console.log("Registration successful, user:", user);
-      
-      if (user) {
-        handleRedirect(user);
-      } else {
-        throw new Error("Invalid response from server");
-      }
+      const result = await registerUser(fullName, email, password);
+      setSuccess("Registration successful! Redirecting to login...");
+      setTimeout(() => {
+        router.push("/auth/login");
+      }, 2000);
     } catch (err: any) {
       console.error("Register error:", err);
       setError(err.message || t("common.error"));
@@ -157,6 +155,12 @@ export default function RegisterPage() {
           {error && (
             <p className="text-red-500 mb-4 text-sm bg-red-50 p-2 rounded border border-red-100">
               {error}
+            </p>
+          )}
+          
+          {success && (
+            <p className="text-green-500 mb-4 text-sm bg-green-50 p-2 rounded border border-green-100">
+              {success}
             </p>
           )}
 

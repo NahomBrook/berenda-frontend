@@ -1,3 +1,4 @@
+// frontend/src/app/auth/login/page.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -45,6 +46,7 @@ export default function LoginPage() {
     
     console.log("✅ ID Token received (first 20 chars):", idToken.substring(0, 20));
     setLoading(true);
+    setError("");
     
     try {
       console.log("📡 Sending token to backend:", `${API_BASE_URL}/auth/google`);
@@ -127,8 +129,20 @@ export default function LoginPage() {
   // Handle email/password login
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate inputs
+    if (!email.trim()) {
+      setError("Email is required");
+      return;
+    }
+    if (!password.trim()) {
+      setError("Password is required");
+      return;
+    }
+    
     setError("");
     setLoading(true);
+    
     try {
       const user = await loginUser(email, password);
       console.log("Login successful, user:", user);
@@ -140,7 +154,7 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(err?.message || t("common.error"));
+      setError(err?.message || "Invalid email or password");
     } finally {
       setLoading(false);
     }
