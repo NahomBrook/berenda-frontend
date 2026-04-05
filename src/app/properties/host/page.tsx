@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/layout/NavBar";
 import { createProperty, uploadPropertyImages } from "@/utils/api";
+import DragDropImageUpload from "@/components/DragDropImageUpload";
 
 // Dynamically import map components with no SSR
 const MapWithNoSSR = dynamic(
@@ -159,7 +160,6 @@ export default function HostPropertyPage() {
     setShowSearchResults(false);
     setSearchQuery("");
     
-    // Navigate the map to this location
     setZoomToLocation({ lat, lng, address });
   };
 
@@ -175,7 +175,6 @@ export default function HostPropertyPage() {
     setShowSearchResults(false);
     setSearchQuery("");
     
-    // Navigate the map to this location
     setZoomToLocation({ lat: area.lat, lng: area.lng, address });
   };
 
@@ -207,7 +206,6 @@ export default function HostPropertyPage() {
           }));
           setMapSelected(true);
           
-          // Navigate the map to current location
           setZoomToLocation({ lat: latitude, lng: longitude, address });
         } catch (err) {
           console.error("Error getting location details:", err);
@@ -236,16 +234,6 @@ export default function HostPropertyPage() {
         ? prev.amenities.filter(a => a !== amenity)
         : [...prev.amenities, amenity]
     }));
-  };
-
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setImageFiles(prev => [...prev, ...files]);
-      
-      const newPreviews = files.map(file => URL.createObjectURL(file));
-      setImagePreviews(prev => [...prev, ...newPreviews]);
-    }
   };
 
   const removeImage = (index: number) => {
@@ -664,53 +652,43 @@ export default function HostPropertyPage() {
             </div>
           )}
 
-          {/* Step 3: Media */}
+          {/* Step 3: Media with Drag & Drop */}
           {currentStep === HostingStep.MEDIA && (
             <div className="space-y-6">
-              <h2 className="text-xl font-light text-gray-900 mb-4">Property Photos</h2>
-              <p className="text-sm text-gray-500 mb-2">
-                Upload up to 10 photos. The first photo will be the cover image.
-              </p>
-              
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                  id="image-upload"
-                />
-                <label htmlFor="image-upload" className="cursor-pointer inline-flex flex-col items-center">
-                  <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span className="text-red-600 font-medium">Click to upload</span>
-                  <span className="text-gray-500 text-sm mt-1">or drag and drop</span>
-                  <span className="text-gray-400 text-xs mt-2">PNG, JPG, WEBP up to 10MB each</span>
-                </label>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-light text-gray-900 mb-1">Property Photos</h2>
+                  <p className="text-sm text-gray-500">
+                    Upload up to 10 photos. The first photo will be the cover image.
+                    Drag and drop images anywhere in the upload area.
+                  </p>
+                </div>
+                <div className="text-sm text-gray-400">
+                  {imageFiles.length} / 10 uploaded
+                </div>
               </div>
 
-              {imagePreviews.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">
-                    Uploaded Images ({imagePreviews.length})
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {imagePreviews.map((preview, index) => (
-                      <div key={index} className="relative group">
-                        <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-24 object-cover rounded-lg" />
-                        <button
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+              <DragDropImageUpload
+                imagePreviews={imagePreviews}
+                onImagesChange={(newFiles) => {
+                  setImageFiles(prev => [...prev, ...newFiles]);
+                  const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+                  setImagePreviews(prev => [...prev, ...newPreviews]);
+                }}
+                onRemoveImage={removeImage}
+                maxImages={10}
+              />
+
+              {imageFiles.length === 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-blue-800 mb-2">💡 Tips for great property photos</h4>
+                  <ul className="text-xs text-blue-700 space-y-1">
+                    <li>• Use natural lighting for bright, inviting photos</li>
+                    <li>• Capture each room from multiple angles</li>
+                    <li>• Show unique features (balcony, view, appliances)</li>
+                    <li>• Ensure photos are clear and high-resolution</li>
+                    <li>• The first photo will be your cover image</li>
+                  </ul>
                 </div>
               )}
             </div>
@@ -747,69 +725,92 @@ export default function HostPropertyPage() {
             </div>
           )}
 
-          {/* Step 5: Review */}
+          {/* Step 5: Review - Compact List View */}
           {currentStep === HostingStep.REVIEW && (
             <div className="space-y-6">
               <h2 className="text-xl font-light text-gray-900 mb-4">Review Your Listing</h2>
               
-              <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-2">{formData.title || "Untitled Property"}</h3>
-                  <p className="text-sm text-gray-600">{formData.location || "Location not set"}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Monthly Price:</span>
-                    <span className="ml-2 font-medium text-gray-900">${formData.monthlyPrice || "0"}</span>
+              <div className="bg-gray-50 rounded-xl p-6">
+                <div className="space-y-3">
+                  {/* Title */}
+                  <div className="flex items-baseline gap-4">
+                    <span className="text-gray-500 w-28 shrink-0">Title:</span>
+                    <span className="text-gray-900 font-medium">{formData.title || "Untitled Property"}</span>
                   </div>
+                  
+                  {/* Location */}
+                  <div className="flex items-baseline gap-4">
+                    <span className="text-gray-500 w-28 shrink-0">Location:</span>
+                    <span className="text-gray-700">{formData.location || "Not set"}</span>
+                  </div>
+                  
+                  {/* Monthly Price */}
+                  <div className="flex items-baseline gap-4">
+                    <span className="text-gray-500 w-28 shrink-0">Monthly Price:</span>
+                    <span className="text-red-600 font-semibold">ETB {formData.monthlyPrice || "0"}</span>
+                  </div>
+                  
+                  {/* Bedrooms */}
                   {formData.bedrooms && (
-                    <div>
-                      <span className="text-gray-500">Bedrooms:</span>
-                      <span className="ml-2 text-gray-900">{formData.bedrooms}</span>
+                    <div className="flex items-baseline gap-4">
+                      <span className="text-gray-500 w-28 shrink-0">Bedrooms:</span>
+                      <span className="text-gray-700">{formData.bedrooms}</span>
                     </div>
                   )}
+                  
+                  {/* Bathrooms */}
                   {formData.bathrooms && (
-                    <div>
-                      <span className="text-gray-500">Bathrooms:</span>
-                      <span className="ml-2 text-gray-900">{formData.bathrooms}</span>
+                    <div className="flex items-baseline gap-4">
+                      <span className="text-gray-500 w-28 shrink-0">Bathrooms:</span>
+                      <span className="text-gray-700">{formData.bathrooms}</span>
                     </div>
                   )}
+                  
+                  {/* Area */}
                   {formData.area && (
-                    <div>
-                      <span className="text-gray-500">Area:</span>
-                      <span className="ml-2 text-gray-900">{formData.area} m²</span>
+                    <div className="flex items-baseline gap-4">
+                      <span className="text-gray-500 w-28 shrink-0">Area:</span>
+                      <span className="text-gray-700">{formData.area} m²</span>
                     </div>
                   )}
-                </div>
-
-                <div>
-                  <span className="text-sm text-gray-500">Coordinates:</span>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {formData.latitude && formData.longitude 
-                      ? `${formData.latitude}, ${formData.longitude}`
-                      : "Not selected"}
-                  </p>
-                </div>
-
-                {formData.amenities.length > 0 && (
-                  <div>
-                    <span className="text-sm text-gray-500">Amenities:</span>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.amenities.map((a) => (
-                        <span key={a} className="px-2 py-1 bg-white border border-gray-200 rounded text-xs">
-                          {a}
-                        </span>
-                      ))}
-                    </div>
+                  
+                  {/* Coordinates */}
+                  <div className="flex items-baseline gap-4">
+                    <span className="text-gray-500 w-28 shrink-0">Coordinates:</span>
+                    <span className="text-gray-600 font-mono text-sm">
+                      {formData.latitude && formData.longitude 
+                        ? `${parseFloat(formData.latitude).toFixed(6)}, ${parseFloat(formData.longitude).toFixed(6)}`
+                        : "Not selected"}
+                    </span>
                   </div>
-                )}
-
-                <div>
-                  <span className="text-sm text-gray-500">Images:</span>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {imageFiles.length} {imageFiles.length === 1 ? 'image' : 'images'} uploaded
-                  </p>
+                  
+                  {/* Amenities */}
+                  {formData.amenities.length > 0 && (
+                    <div className="flex gap-4">
+                      <span className="text-gray-500 w-28 shrink-0">Amenities:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {formData.amenities.map((a) => (
+                          <span key={a} className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-xs">
+                            {a}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Images */}
+                  <div className="flex gap-4">
+                    <span className="text-gray-500 w-28 shrink-0">Images:</span>
+                    <span className="text-gray-700">{imageFiles.length} {imageFiles.length === 1 ? 'image' : 'images'} uploaded</span>
+                  </div>
+                  
+                  {/* Description */}
+                  {formData.description && (
+                    <div className="flex gap-4">
+                      <span className="text-gray-500 w-28 shrink-0">Description:</span>
+                      <p className="text-gray-700 text-sm flex-1">{formData.description}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
