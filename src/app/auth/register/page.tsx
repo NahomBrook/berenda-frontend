@@ -21,6 +21,20 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoaded, setGoogleLoaded] = useState(false);
 
+  // Handle redirect after successful registration/login
+  const handleRedirect = useCallback((user: any) => {
+    console.log("Redirecting user:", user);
+    const isAdmin = user?.roles?.some(
+      (r: any) => r.name === "ADMIN" || r.name === "SUPER_ADMIN"
+    );
+    
+    if (isAdmin) {
+      router.push("/admin");
+    } else {
+      router.push("/");
+    }
+  }, [router]);
+
   // Handle Google OAuth callback
   const handleGoogleCallback = useCallback(async (response: any) => {
     const idToken = response?.credential;
@@ -48,16 +62,7 @@ export default function RegisterPage() {
       if (result.status === 200 && result.data) {
         localStorage.setItem("token", result.data.token);
         localStorage.setItem("user", JSON.stringify(result.data.user));
-        
-        const isAdmin = result.data.user?.roles?.some(
-          (r: any) => r.name === "ADMIN" || r.name === "SUPER_ADMIN"
-        );
-        
-        if (isAdmin) {
-          router.push("/admin");
-        } else {
-          router.push("/");
-        }
+        handleRedirect(result.data.user);
       }
     } catch (err: any) {
       console.error("Google auth error:", err);
@@ -65,7 +70,7 @@ export default function RegisterPage() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, handleRedirect]);
 
   // Initialize Google Sign-In
   const initializeGoogle = useCallback(() => {
@@ -123,11 +128,15 @@ export default function RegisterPage() {
     setSuccess("");
     
     try {
-      const result = await registerUser(fullName, email, password);
-      setSuccess("Registration successful! Redirecting to login...");
-      setTimeout(() => {
-        router.push("/auth/login");
-      }, 2000);
+      // registerUser now returns user object and stores token
+      const user = await registerUser(fullName, email, password);
+      console.log("Registration successful, user:", user);
+      
+      if (user) {
+        handleRedirect(user);
+      } else {
+        throw new Error("Invalid response from server");
+      }
     } catch (err: any) {
       console.error("Register error:", err);
       setError(err.message || t("common.error"));

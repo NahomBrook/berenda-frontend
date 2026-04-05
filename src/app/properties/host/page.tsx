@@ -462,7 +462,7 @@ export default function HostPropertyPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monthly Price ($) <span className="text-red-500">*</span>
+                    Monthly Price (ETB) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -500,7 +500,7 @@ export default function HostPropertyPage() {
                     value={formData.bathrooms}
                     onChange={handleInputChange}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                    placeholder="1.5"
+                    placeholder="1"
                     min="0"
                     step="0.5"
                   />
