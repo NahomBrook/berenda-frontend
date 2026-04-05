@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Globe, User, MessageCircle, Search } from "lucide-react";
+import { Globe, User, MessageCircle, Search, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -14,16 +14,16 @@ interface NavbarProps {
 export default function Navbar({ onSearchClick, showSearchButton = false }: NavbarProps) {
   const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [user, setUser] = useState<{ fullName: string } | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const { toggleLanguage, t } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
 
   // Check for authenticated user on load
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       const storedUser = localStorage.getItem("user");
-      // Handle case where storedUser is "undefined" string or null
       if (storedUser && storedUser !== "undefined") {
         try {
           setUser(JSON.parse(storedUser));
@@ -34,11 +34,8 @@ export default function Navbar({ onSearchClick, showSearchButton = false }: Navb
       } else {
         setUser({ fullName: "User" });
       }
-      //fetchUnreadCount();
     }
   }, []);
-
-  
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -59,6 +56,11 @@ export default function Navbar({ onSearchClick, showSearchButton = false }: Navb
     }
   };
 
+  const handleLanguageChange = (lang: "en" | "am") => {
+    setLanguage(lang);
+    setIsLanguageDropdownOpen(false);
+  };
+
   return (
     <nav className="w-full flex justify-between items-center px-6 py-4 bg-white shadow-sm sticky top-0 z-40 transition-all duration-300">
       {/* Left: Logo */}
@@ -76,7 +78,7 @@ export default function Navbar({ onSearchClick, showSearchButton = false }: Navb
           className="cursor-pointer hover:text-gray-900 transition-colors" 
           onClick={() => router.push("/")}
         >
-          {t('Home')}
+          {t('nav.home')}
         </span>
         
         {/* Search Link - Appears when scrolled */}
@@ -86,7 +88,7 @@ export default function Navbar({ onSearchClick, showSearchButton = false }: Navb
             onClick={handleSearchClick}
           >
             <Search className="w-4 h-4" />
-            {t('search')}
+            {t('common.search')}
           </span>
         )}
       </div>
@@ -108,7 +110,7 @@ export default function Navbar({ onSearchClick, showSearchButton = false }: Navb
           className="hidden md:block cursor-pointer hover:text-gray-900 transition-colors"
           onClick={handleHostClick}
         >
-          {t('+ Host a Berenda')}
+          {t('nav.host')}
         </span>
 
         {/* Chat Button */}
@@ -124,11 +126,45 @@ export default function Navbar({ onSearchClick, showSearchButton = false }: Navb
           )}
         </button>
 
-        {/* Globe / Language */}
-        <Globe 
-          className="w-5 h-5 cursor-pointer text-gray-700 hover:text-gray-900 transition-colors" 
-          onClick={toggleLanguage}
-        />
+        {/* Language Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <Globe className="w-5 h-5 text-gray-700" />
+            <ChevronDown className="w-3 h-3 text-gray-500" />
+          </button>
+
+          {isLanguageDropdownOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setIsLanguageDropdownOpen(false)}
+              />
+              <div className="absolute right-0 mt-2 w-36 bg-white rounded-lg shadow-lg border border-gray-200 z-20 overflow-hidden">
+                <button
+                  onClick={() => handleLanguageChange("en")}
+                  className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                    language === "en" ? "bg-red-50 text-red-600" : "text-gray-700"
+                  }`}
+                >
+                  <span>English</span>
+                  {language === "en" && <span className="text-red-600">✓</span>}
+                </button>
+                <button
+                  onClick={() => handleLanguageChange("am")}
+                  className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                    language === "am" ? "bg-red-50 text-red-600" : "text-gray-700"
+                  }`}
+                >
+                  <span>አማርኛ</span>
+                  {language === "am" && <span className="text-red-600">✓</span>}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Profile / Auth Dropdown */}
         <div
@@ -139,20 +175,20 @@ export default function Navbar({ onSearchClick, showSearchButton = false }: Navb
         </div>
 
         {isDropdownOpen && (
-          <div className="absolute right-0 top-12 bg-white border shadow-md rounded-md w-40 flex flex-col z-50 animate-slideDown">
+          <div className="absolute right-0 top-12 bg-white border shadow-md rounded-md w-40 flex flex-col z-50 animate-slideDown overflow-hidden">
             {!user ? (
               <>
                 <button
                   className="px-4 py-2 text-left hover:bg-gray-100 transition-colors"
                   onClick={() => router.push("/auth/register")}
                 >
-                  {t('register')}
+                  {t('nav.register')}
                 </button>
                 <button
                   className="px-4 py-2 text-left hover:bg-gray-100 transition-colors"
                   onClick={() => router.push("/auth/login")}
                 >
-                  {t('login')}
+                  {t('nav.login')}
                 </button>
               </>
             ) : (
@@ -161,14 +197,19 @@ export default function Navbar({ onSearchClick, showSearchButton = false }: Navb
                   className="px-4 py-2 text-left hover:bg-gray-100 transition-colors"
                   onClick={() => router.push("/profile")}
                 >
-                  {t('profile')}
+                  {t('nav.profile')}
                 </button>
-                
+                <button
+                  className="px-4 py-2 text-left hover:bg-gray-100 transition-colors"
+                  onClick={() => router.push("/bookings")}
+                >
+                  {t('nav.bookings')}
+                </button>
                 <button
                   className="px-4 py-2 text-left hover:bg-gray-100 transition-colors"
                   onClick={handleLogout}
                 >
-                  {t('logout')}
+                  {t('nav.logout')}
                 </button>
               </>
             )}

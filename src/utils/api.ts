@@ -19,6 +19,7 @@ export async function registerUser(fullName: string, email: string, password: st
       throw new Error("All fields are required");
     }
 
+    // Step 1: Register
     const registerRes = await fetch(`${API_BASE_URL}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -32,8 +33,32 @@ export async function registerUser(fullName: string, email: string, password: st
       throw new Error(registerData.message || "Registration failed");
     }
 
-    // Registration successful - redirect to login page
-    return { success: true, message: "Registration successful! Please log in." };
+    // Step 2: Auto-login after successful registration
+    const loginRes = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const loginData = await loginRes.json();
+    console.log("Auto-login response:", loginData);
+
+    if (!loginRes.ok) {
+      // If auto-login fails, still return success but without token
+      throw new Error("Registration successful but auto-login failed. Please log in manually.");
+    }
+
+    const result = extractData(loginData);
+    
+    if (result.token) {
+      localStorage.setItem("token", result.token);
+    }
+    if (result.user) {
+      localStorage.setItem("user", JSON.stringify(result.user));
+      return result.user;
+    }
+    
+    throw new Error("Invalid response format from server");
   } catch (error: any) {
     console.error("Registration error:", error);
     throw error;
