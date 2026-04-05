@@ -18,9 +18,16 @@ import {
   Home,
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  Building2,
+  AlertCircle,
+  Globe,
+  Bell,
+  Lock,
+  Eye,
+  Languages
 } from "lucide-react";
-import { getProfile, updateProfile, uploadProfileImage } from "../../utils/profileApi";
+import { getProfile, updateProfile, uploadProfileImage, getUserBookings, getFavorites, getUserProperties, updateUserSettings, getSettings } from "../../utils/profileApi";
 import Navbar from "@/components/layout/NavBar";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -37,7 +44,7 @@ interface Booking {
   checkIn: string;
   checkOut: string;
   totalPrice: number;
-  status: 'confirmed' | 'pending' | 'cancelled';
+  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
   imageUrl: string;
 }
 
@@ -48,6 +55,30 @@ interface WishlistItem {
   price: number;
   imageUrl: string;
   rating: number;
+}
+
+interface HostedProperty {
+  id: string;
+  title: string;
+  location: string;
+  monthlyPrice: number;
+  status: 'pending' | 'approved' | 'rejected';
+  imageUrl: string;
+  createdAt: string;
+}
+
+interface UserSettings {
+  emailNotifications: {
+    newMessages: boolean;
+    bookingConfirmations: boolean;
+    promotionalOffers: boolean;
+  };
+  privacy: {
+    profilePublic: boolean;
+    showEmail: boolean;
+  };
+  language: string;
+  region: string;
 }
 
 export default function ProfileDashboard() {
@@ -65,11 +96,27 @@ export default function ProfileDashboard() {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+  const [hostedProperties, setHostedProperties] = useState<HostedProperty[]>([]);
+  const [settings, setSettings] = useState<UserSettings>({
+    emailNotifications: {
+      newMessages: true,
+      bookingConfirmations: true,
+      promotionalOffers: false,
+    },
+    privacy: {
+      profilePublic: true,
+      showEmail: false,
+    },
+    language: "en",
+    region: "US",
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const tabs: Tab[] = [
     { name: "Profile", key: "profile", icon: <User className="w-5 h-5" /> },
     { name: "Bookings", key: "bookings", icon: <Calendar className="w-5 h-5" /> },
     { name: "Wishlist", key: "wishlist", icon: <Heart className="w-5 h-5" /> },
+    { name: "Hosting", key: "hosting", icon: <Home className="w-5 h-5" /> },
     { name: "Settings", key: "settings", icon: <Settings className="w-5 h-5" /> },
   ];
 
@@ -96,50 +143,6 @@ export default function ProfileDashboard() {
             email: res.data.email,
             phone: res.data.phone || "",
           });
-          
-          // Mock bookings data - replace with actual API call
-          setBookings([
-            {
-              id: "1",
-              propertyTitle: "Luxury Beachfront Villa",
-              propertyLocation: "Malibu, California",
-              checkIn: "2024-03-15",
-              checkOut: "2024-03-20",
-              totalPrice: 2450,
-              status: "confirmed",
-              imageUrl: "/placeholder.png"
-            },
-            {
-              id: "2",
-              propertyTitle: "Downtown Loft",
-              propertyLocation: "New York, NY",
-              checkIn: "2024-04-01",
-              checkOut: "2024-04-05",
-              totalPrice: 1200,
-              status: "pending",
-              imageUrl: "/placeholder.png"
-            }
-          ]);
-          
-          // Mock wishlist data
-          setWishlist([
-            {
-              id: "1",
-              title: "Mountain Retreat",
-              location: "Aspen, Colorado",
-              price: 350,
-              imageUrl: "/placeholder.png",
-              rating: 4.8
-            },
-            {
-              id: "2",
-              title: "Modern City Apartment",
-              location: "Chicago, Illinois",
-              price: 180,
-              imageUrl: "/placeholder.png",
-              rating: 4.6
-            }
-          ]);
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -150,6 +153,107 @@ export default function ProfileDashboard() {
     
     fetchProfile();
   }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchBookings = async () => {
+      try {
+        const res = await getUserBookings(token);
+        if (res.success && res.data) {
+          const transformedBookings = res.data.map((booking: any) => ({
+            id: booking.id,
+            propertyTitle: booking.property?.title || "Property",
+            propertyLocation: booking.property?.location || "Location",
+            checkIn: booking.startDate,
+            checkOut: booking.endDate,
+            totalPrice: booking.totalPrice || booking.property?.monthlyPrice || 0,
+            status: mapBookingStatus(booking.status),
+            imageUrl: booking.property?.media?.[0]?.mediaUrl || "/placeholder.png"
+          }));
+          setBookings(transformedBookings);
+        }
+      } catch (error) {
+        console.error("Error fetching bookings:", error);
+      }
+    };
+    
+    fetchBookings();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchWishlist = async () => {
+      try {
+        const res = await getFavorites(token);
+        if (res.success && res.data) {
+          setWishlist(res.data);
+        }
+      } catch (error) {
+        console.error("Error fetching wishlist:", error);
+      }
+    };
+    
+    fetchWishlist();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchHostedProperties = async () => {
+      try {
+        const res = await getUserProperties(token);
+        if (res.success && res.data) {
+          const transformedProperties = res.data.map((property: any) => ({
+            id: property.id,
+            title: property.title,
+            location: property.location,
+            monthlyPrice: property.monthlyPrice,
+            status: property.approvalStatus,
+            imageUrl: property.media?.[0]?.mediaUrl || "/placeholder.png",
+            createdAt: property.createdAt,
+          }));
+          setHostedProperties(transformedProperties);
+        }
+      } catch (error) {
+        console.error("Error fetching hosted properties:", error);
+      }
+    };
+    
+    fetchHostedProperties();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchSettings = async () => {
+      try {
+        const res = await getSettings(token);
+        if (res.success && res.data) {
+          setSettings(res.data);
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+      }
+    };
+    
+    fetchSettings();
+  }, [token]);
+
+  const mapBookingStatus = (status: string): 'confirmed' | 'pending' | 'cancelled' | 'completed' => {
+    switch (status.toLowerCase()) {
+      case 'approved':
+      case 'confirmed':
+        return 'confirmed';
+      case 'cancelled':
+        return 'cancelled';
+      case 'completed':
+        return 'completed';
+      default:
+        return 'pending';
+    }
+  };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -184,6 +288,23 @@ export default function ProfileDashboard() {
     }
   };
 
+  const handleSaveSettings = async () => {
+    if (!token) return;
+    setSavingSettings(true);
+    try {
+      await updateUserSettings(settings, token);
+      setMessage("Settings updated successfully!");
+      setMessageType("success");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (err: any) {
+      setMessage(err.message || "Failed to update settings");
+      setMessageType("error");
+      setTimeout(() => setMessage(""), 3000);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -192,19 +313,50 @@ export default function ProfileDashboard() {
 
   const getStatusColor = (status: string) => {
     switch(status) {
-      case 'confirmed': return 'text-green-600 bg-green-50';
-      case 'pending': return 'text-yellow-600 bg-yellow-50';
-      case 'cancelled': return 'text-red-600 bg-red-50';
-      default: return 'text-gray-600 bg-gray-50';
+      case 'confirmed':
+      case 'approved':
+        return 'text-green-600 bg-green-50';
+      case 'pending':
+      case 'pending_payment':
+        return 'text-yellow-600 bg-yellow-50';
+      case 'cancelled':
+        return 'text-red-600 bg-red-50';
+      case 'completed':
+        return 'text-blue-600 bg-blue-50';
+      case 'rejected':
+        return 'text-red-600 bg-red-50';
+      default:
+        return 'text-gray-600 bg-gray-50';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch(status) {
-      case 'confirmed': return <CheckCircle className="w-4 h-4" />;
-      case 'pending': return <Clock className="w-4 h-4" />;
-      case 'cancelled': return <XCircle className="w-4 h-4" />;
-      default: return null;
+      case 'confirmed':
+      case 'approved':
+        return <CheckCircle className="w-4 h-4" />;
+      case 'pending':
+      case 'pending_payment':
+        return <Clock className="w-4 h-4" />;
+      case 'cancelled':
+        return <XCircle className="w-4 h-4" />;
+      case 'completed':
+        return <CheckCircle className="w-4 h-4" />;
+      default:
+        return null;
+    }
+  };
+
+  const getHostingStatusColor = (status: string) => {
+    switch(status) {
+      case 'approved':
+        return 'text-green-600 bg-green-50';
+      case 'pending':
+        return 'text-yellow-600 bg-yellow-50';
+      case 'rejected':
+        return 'text-red-600 bg-red-50';
+      default:
+        return 'text-gray-600 bg-gray-50';
     }
   };
 
@@ -263,6 +415,9 @@ export default function ProfileDashboard() {
                       src={imagePreview || user.profileImageUrl || "/default-avatar.png"}
                       alt="Profile"
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/default-avatar.png";
+                      }}
                     />
                   </div>
                   {editing && (
@@ -327,8 +482,8 @@ export default function ProfileDashboard() {
                 <div className="p-6 border-b border-gray-100">
                   <div className="flex justify-between items-center">
                     <div>
-                        <h2 className="text-2xl font-semibold text-gray-900">{t("profile.tab.profile")}</h2>
-                        <p className="text-gray-600 mt-1">{t("profile.subtitle")}</p>
+                        <h2 className="text-2xl font-semibold text-gray-900">Profile Information</h2>
+                        <p className="text-gray-600 mt-1">Manage your personal information</p>
                     </div>
                     {!editing && (
                       <button
@@ -336,7 +491,7 @@ export default function ProfileDashboard() {
                         className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
                       >
                           <Edit2 className="w-4 h-4" />
-                          {t("profile.editProfile")}
+                          Edit Profile
                       </button>
                     )}
                   </div>
@@ -454,32 +609,36 @@ export default function ProfileDashboard() {
             {activeTab.key === "bookings" && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
-                      <h2 className="text-2xl font-semibold text-gray-900">{t("bookings.title")}</h2>
-                      <p className="text-gray-600 mt-1">{t("bookings.title")}</p>
+                  <h2 className="text-2xl font-semibold text-gray-900">My Bookings</h2>
+                  <p className="text-gray-600 mt-1">View and manage your booking history</p>
                 </div>
 
                 <div className="p-6">
                   {bookings.length === 0 ? (
                     <div className="text-center py-12">
                       <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">{t("bookings.noBookings")}</p>
+                      <p className="text-gray-500">No bookings yet</p>
                       <button 
                         onClick={() => router.push("/")}
                         className="mt-4 text-red-500 hover:text-red-600 font-medium"
                       >
-                        {t("profile.startExploring")}
+                        Start Exploring Properties →
                       </button>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {bookings.map((booking) => (
-                        <div key={booking.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition">
+                        <div key={booking.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition cursor-pointer"
+                          onClick={() => router.push(`/bookings/${booking.id}`)}>
                           <div className="flex flex-col md:flex-row gap-4">
                             <div className="w-full md:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
                               <img 
                                 src={booking.imageUrl} 
                                 alt={booking.propertyTitle}
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "/placeholder.png";
+                                }}
                               />
                             </div>
                             <div className="flex-1">
@@ -516,20 +675,20 @@ export default function ProfileDashboard() {
             {activeTab.key === "wishlist" && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
-                  <h2 className="text-2xl font-semibold text-gray-900">{t("profile.tab.wishlist")}</h2>
-                  <p className="text-gray-600 mt-1">{t("profile.tab.wishlist")}</p>
+                  <h2 className="text-2xl font-semibold text-gray-900">My Wishlist</h2>
+                  <p className="text-gray-600 mt-1">Properties you've saved for later</p>
                 </div>
 
                 <div className="p-6">
                   {wishlist.length === 0 ? (
                     <div className="text-center py-12">
                       <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">{t("bookings.noBookings")}</p>
+                      <p className="text-gray-500">Your wishlist is empty</p>
                       <button 
                         onClick={() => router.push("/")}
                         className="mt-4 text-red-500 hover:text-red-600 font-medium"
                       >
-                        Browse properties →
+                        Browse Properties →
                       </button>
                     </div>
                   ) : (
@@ -538,13 +697,20 @@ export default function ProfileDashboard() {
                         <div key={item.id} className="border border-gray-100 rounded-xl overflow-hidden hover:shadow-md transition cursor-pointer"
                           onClick={() => router.push(`/listings/${item.id}`)}>
                           <div className="h-48 bg-gray-100">
-                            <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                            <img 
+                              src={item.imageUrl} 
+                              alt={item.title} 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "/placeholder.png";
+                              }}
+                            />
                           </div>
                           <div className="p-4">
                             <h3 className="font-semibold text-gray-900">{item.title}</h3>
                             <p className="text-gray-600 text-sm mt-1">{item.location}</p>
                             <div className="flex justify-between items-center mt-3">
-                              <p className="text-red-500 font-semibold">${item.price}/night</p>
+                              <p className="text-red-500 font-semibold">${item.price}<span className="text-gray-500 text-sm">/night</span></p>
                               <div className="flex items-center gap-1 text-sm text-gray-600">
                                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                                 {item.rating}
@@ -559,58 +725,237 @@ export default function ProfileDashboard() {
               </div>
             )}
 
+            {activeTab.key === "hosting" && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-6 border-b border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h2 className="text-2xl font-semibold text-gray-900">Hosted Properties</h2>
+                      <p className="text-gray-600 mt-1">Manage properties you're hosting</p>
+                    </div>
+                    <button
+                      onClick={() => router.push("/properties/create")}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition shadow-md"
+                    >
+                      <Building2 className="w-4 h-4" />
+                      Add New Property
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  {hostedProperties.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Home className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500">You haven't listed any properties yet</p>
+                      <button 
+                        onClick={() => router.push("/properties/create")}
+                        className="mt-4 text-red-500 hover:text-red-600 font-medium"
+                      >
+                        Start Hosting →
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {hostedProperties.map((property) => (
+                        <div key={property.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition cursor-pointer"
+                          onClick={() => router.push(`/properties/${property.id}`)}>
+                          <div className="flex flex-col md:flex-row gap-4">
+                            <div className="w-full md:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
+                              <img 
+                                src={property.imageUrl} 
+                                alt={property.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "/placeholder.png";
+                                }}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-semibold text-lg text-gray-900">{property.title}</h3>
+                                  <p className="text-gray-600 text-sm mt-1">{property.location}</p>
+                                </div>
+                                <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${getHostingStatusColor(property.status)}`}>
+                                  {property.status === 'pending' && <Clock className="w-4 h-4" />}
+                                  {property.status === 'approved' && <CheckCircle className="w-4 h-4" />}
+                                  {property.status === 'rejected' && <AlertCircle className="w-4 h-4" />}
+                                  <span className="capitalize">{property.status}</span>
+                                </div>
+                              </div>
+                              <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-600">
+                                <div className="flex items-center gap-1">
+                                  <Home className="w-4 h-4" />
+                                  ${property.monthlyPrice}/month
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-4 h-4" />
+                                  Listed {new Date(property.createdAt).toLocaleDateString()}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {activeTab.key === "settings" && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
-                  <h2 className="text-2xl font-semibold text-gray-900">{t("profile.tab.settings")}</h2>
-                  <p className="text-gray-600 mt-1">{t("profile.tab.settings")}</p>
+                  <h2 className="text-2xl font-semibold text-gray-900">Settings</h2>
+                  <p className="text-gray-600 mt-1">Manage your preferences and privacy</p>
                 </div>
 
                 <div className="p-6">
                   <div className="space-y-6">
+                    {/* Notifications Section */}
                     <div>
-                      <h3 className="font-medium text-gray-900 mb-3">{t("profile.tab.settings")}</h3>
-                      <div className="space-y-3">
+                      <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                        <Bell className="w-5 h-5 text-red-500" />
+                        Notifications
+                      </h3>
+                      <div className="space-y-3 pl-7">
                         <label className="flex items-center gap-3 cursor-pointer">
-                          <input type="checkbox" className="w-4 h-4 text-red-500 rounded" />
+                          <input 
+                            type="checkbox" 
+                            checked={settings.emailNotifications.newMessages}
+                            onChange={(e) => setSettings({
+                              ...settings,
+                              emailNotifications: {
+                                ...settings.emailNotifications,
+                                newMessages: e.target.checked
+                              }
+                            })}
+                            className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
+                          />
                           <span className="text-gray-700">Email me about new messages</span>
                         </label>
                         <label className="flex items-center gap-3 cursor-pointer">
-                          <input type="checkbox" className="w-4 h-4 text-red-500 rounded" />
+                          <input 
+                            type="checkbox" 
+                            checked={settings.emailNotifications.bookingConfirmations}
+                            onChange={(e) => setSettings({
+                              ...settings,
+                              emailNotifications: {
+                                ...settings.emailNotifications,
+                                bookingConfirmations: e.target.checked
+                              }
+                            })}
+                            className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
+                          />
                           <span className="text-gray-700">Email me about booking confirmations</span>
                         </label>
                         <label className="flex items-center gap-3 cursor-pointer">
-                          <input type="checkbox" className="w-4 h-4 text-red-500 rounded" />
+                          <input 
+                            type="checkbox" 
+                            checked={settings.emailNotifications.promotionalOffers}
+                            onChange={(e) => setSettings({
+                              ...settings,
+                              emailNotifications: {
+                                ...settings.emailNotifications,
+                                promotionalOffers: e.target.checked
+                              }
+                            })}
+                            className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
+                          />
                           <span className="text-gray-700">Receive promotional offers</span>
                         </label>
                       </div>
                     </div>
 
+                    {/* Privacy Section */}
                     <div className="pt-6 border-t border-gray-100">
-                      <h3 className="font-medium text-gray-900 mb-3">Privacy</h3>
-                      <div className="space-y-3">
+                      <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                        <Lock className="w-5 h-5 text-red-500" />
+                        Privacy
+                      </h3>
+                      <div className="space-y-3 pl-7">
                         <label className="flex items-center gap-3 cursor-pointer">
-                          <input type="checkbox" className="w-4 h-4 text-red-500 rounded" />
+                          <input 
+                            type="checkbox" 
+                            checked={settings.privacy.profilePublic}
+                            onChange={(e) => setSettings({
+                              ...settings,
+                              privacy: {
+                                ...settings.privacy,
+                                profilePublic: e.target.checked
+                              }
+                            })}
+                            className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
+                          />
                           <span className="text-gray-700">Make my profile public</span>
                         </label>
                         <label className="flex items-center gap-3 cursor-pointer">
-                          <input type="checkbox" className="w-4 h-4 text-red-500 rounded" />
+                          <input 
+                            type="checkbox" 
+                            checked={settings.privacy.showEmail}
+                            onChange={(e) => setSettings({
+                              ...settings,
+                              privacy: {
+                                ...settings.privacy,
+                                showEmail: e.target.checked
+                              }
+                            })}
+                            className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
+                          />
                           <span className="text-gray-700">Show my email on profile</span>
                         </label>
                       </div>
                     </div>
 
+                    {/* Language & Region Section */}
                     <div className="pt-6 border-t border-gray-100">
-                      <h3 className="font-medium text-gray-900 mb-3">Language & Region</h3>
-                      <select className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500">
-                        <option>English (US)</option>
-                        <option>Amharic (Ethiopia)</option>
-                      </select>
+                      <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                        <Globe className="w-5 h-5 text-red-500" />
+                        Language & Region
+                      </h3>
+                      <div className="space-y-4 pl-7">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
+                          <select 
+                            value={settings.language}
+                            onChange={(e) => setSettings({
+                              ...settings,
+                              language: e.target.value
+                            })}
+                            className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                          >
+                            <option value="en">English (US)</option>
+                            <option value="am">አማርኛ (Amharic)</option>
+                            <option value="fr">Français</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Region</label>
+                          <select 
+                            value={settings.region}
+                            onChange={(e) => setSettings({
+                              ...settings,
+                              region: e.target.value
+                            })}
+                            className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                          >
+                            <option value="US">United States</option>
+                            <option value="ET">Ethiopia</option>
+                            <option value="UK">United Kingdom</option>
+                            <option value="CA">Canada</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="pt-6">
-                      <button className="px-6 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition">
-                        {t("profile.saveChanges")}
+                      <button 
+                        onClick={handleSaveSettings}
+                        disabled={savingSettings}
+                        className="px-6 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {savingSettings ? "Saving..." : "Save Settings"}
                       </button>
                     </div>
                   </div>

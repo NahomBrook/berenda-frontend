@@ -1,3 +1,4 @@
+// profileApi.ts
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 export const getProfile = async (token: string) => {
@@ -31,6 +32,25 @@ export const uploadProfileImage = async (file: File, token: string) => {
       Authorization: `Bearer ${token}`,
     },
     body: formData,
+  });
+  return res.json();
+};
+
+// Add these new functions
+export const getUserBookings = async (token: string) => {
+  const res = await fetch(`${API_BASE}/bookings`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.json();
+};
+
+export const getFavorites = async (token: string) => {
+  const res = await fetch(`${API_BASE}/favorites`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
   return res.json();
 };
