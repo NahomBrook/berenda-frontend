@@ -79,6 +79,7 @@ interface UserSettings {
   };
   language: string;
   region: string;
+  currency?: string;
 }
 
 export default function ProfileDashboard() {
@@ -109,6 +110,7 @@ export default function ProfileDashboard() {
     },
     language: "en",
     region: "US",
+    currency: "USD",
   });
   const [savingSettings, setSavingSettings] = useState(false);
 
@@ -231,7 +233,10 @@ export default function ProfileDashboard() {
       try {
         const res = await getSettings(token);
         if (res.success && res.data) {
-          setSettings(res.data);
+          setSettings({
+            ...settings,
+            ...res.data,
+          });
         }
       } catch (error) {
         console.error("Error fetching settings:", error);
@@ -285,6 +290,20 @@ export default function ProfileDashboard() {
       setMessage(err.message || "Failed to update profile");
       setMessageType("error");
       setTimeout(() => setMessage(""), 3000);
+    }
+  };
+
+  // Auto-save settings function
+  const handleAutoSaveSettings = async (newSettings: any) => {
+    if (!token) return;
+    
+    try {
+      await updateUserSettings(newSettings, token);
+      setMessage("Settings saved!");
+      setMessageType("success");
+      setTimeout(() => setMessage(""), 2000);
+    } catch (err: any) {
+      console.error("Error auto-saving settings:", err);
     }
   };
 
@@ -410,15 +429,23 @@ export default function ProfileDashboard() {
               {/* Profile Summary */}
               <div className="p-6 text-center border-b border-gray-100">
                 <div className="relative inline-block">
-                  <div className="w-28 h-28 rounded-full overflow-hidden mx-auto mb-4 ring-4 ring-red-100 shadow-lg">
-                    <img
-                      src={imagePreview || user.profileImageUrl || "/default-avatar.png"}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/default-avatar.png";
-                      }}
-                    />
+                  <div className="w-28 h-28 rounded-full overflow-hidden mx-auto mb-4 ring-4 ring-red-100 shadow-lg bg-gradient-to-br from-red-100 to-red-50">
+                    {imagePreview || user.profileImageUrl ? (
+                      <img
+                        src={imagePreview || user.profileImageUrl}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/default-avatar.png";
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-400 to-red-600">
+                        <span className="text-white text-4xl font-bold">
+                          {user.fullName?.charAt(0).toUpperCase() || "U"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   {editing && (
                     <label className="absolute bottom-0 right-0 bg-red-500 rounded-full p-2 cursor-pointer hover:bg-red-600 transition shadow-lg">
@@ -710,7 +737,7 @@ export default function ProfileDashboard() {
                             <h3 className="font-semibold text-gray-900">{item.title}</h3>
                             <p className="text-gray-600 text-sm mt-1">{item.location}</p>
                             <div className="flex justify-between items-center mt-3">
-                              <p className="text-red-500 font-semibold">${item.price}<span className="text-gray-500 text-sm">/night</span></p>
+                              <p className="text-red-500 font-semibold">${item.price}<span className="text-gray-500 text-sm">/month</span></p>
                               <div className="flex items-center gap-1 text-sm text-gray-600">
                                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                                 {item.rating}
@@ -734,7 +761,7 @@ export default function ProfileDashboard() {
                       <p className="text-gray-600 mt-1">Manage properties you're hosting</p>
                     </div>
                     <button
-                      onClick={() => router.push("/properties/create")}
+                      onClick={() => router.push("/properties/host")}
                       className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition shadow-md"
                     >
                       <Building2 className="w-4 h-4" />
@@ -749,7 +776,7 @@ export default function ProfileDashboard() {
                       <Home className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                       <p className="text-gray-500">You haven't listed any properties yet</p>
                       <button 
-                        onClick={() => router.push("/properties/create")}
+                        onClick={() => router.push("/properties/host")}
                         className="mt-4 text-red-500 hover:text-red-600 font-medium"
                       >
                         Start Hosting →
@@ -780,7 +807,7 @@ export default function ProfileDashboard() {
                                 <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${getHostingStatusColor(property.status)}`}>
                                   {property.status === 'pending' && <Clock className="w-4 h-4" />}
                                   {property.status === 'approved' && <CheckCircle className="w-4 h-4" />}
-                                  {property.status === 'rejected' && <AlertCircle className="w-4 h-4" />}
+                                  {property.status === 'rejected' && <XCircle className="w-4 h-4" />}
                                   <span className="capitalize">{property.status}</span>
                                 </div>
                               </div>
@@ -793,6 +820,12 @@ export default function ProfileDashboard() {
                                   <Calendar className="w-4 h-4" />
                                   Listed {new Date(property.createdAt).toLocaleDateString()}
                                 </div>
+                                {property.status === 'pending' && (
+                                  <div className="flex items-center gap-1 text-yellow-600">
+                                    <Clock className="w-4 h-4" />
+                                    Awaiting approval
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -824,13 +857,17 @@ export default function ProfileDashboard() {
                           <input 
                             type="checkbox" 
                             checked={settings.emailNotifications.newMessages}
-                            onChange={(e) => setSettings({
-                              ...settings,
-                              emailNotifications: {
-                                ...settings.emailNotifications,
-                                newMessages: e.target.checked
-                              }
-                            })}
+                            onChange={(e) => {
+                              const newSettings = {
+                                ...settings,
+                                emailNotifications: {
+                                  ...settings.emailNotifications,
+                                  newMessages: e.target.checked
+                                }
+                              };
+                              setSettings(newSettings);
+                              handleAutoSaveSettings(newSettings);
+                            }}
                             className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
                           />
                           <span className="text-gray-700">Email me about new messages</span>
@@ -839,13 +876,17 @@ export default function ProfileDashboard() {
                           <input 
                             type="checkbox" 
                             checked={settings.emailNotifications.bookingConfirmations}
-                            onChange={(e) => setSettings({
-                              ...settings,
-                              emailNotifications: {
-                                ...settings.emailNotifications,
-                                bookingConfirmations: e.target.checked
-                              }
-                            })}
+                            onChange={(e) => {
+                              const newSettings = {
+                                ...settings,
+                                emailNotifications: {
+                                  ...settings.emailNotifications,
+                                  bookingConfirmations: e.target.checked
+                                }
+                              };
+                              setSettings(newSettings);
+                              handleAutoSaveSettings(newSettings);
+                            }}
                             className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
                           />
                           <span className="text-gray-700">Email me about booking confirmations</span>
@@ -854,13 +895,17 @@ export default function ProfileDashboard() {
                           <input 
                             type="checkbox" 
                             checked={settings.emailNotifications.promotionalOffers}
-                            onChange={(e) => setSettings({
-                              ...settings,
-                              emailNotifications: {
-                                ...settings.emailNotifications,
-                                promotionalOffers: e.target.checked
-                              }
-                            })}
+                            onChange={(e) => {
+                              const newSettings = {
+                                ...settings,
+                                emailNotifications: {
+                                  ...settings.emailNotifications,
+                                  promotionalOffers: e.target.checked
+                                }
+                              };
+                              setSettings(newSettings);
+                              handleAutoSaveSettings(newSettings);
+                            }}
                             className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
                           />
                           <span className="text-gray-700">Receive promotional offers</span>
@@ -879,13 +924,17 @@ export default function ProfileDashboard() {
                           <input 
                             type="checkbox" 
                             checked={settings.privacy.profilePublic}
-                            onChange={(e) => setSettings({
-                              ...settings,
-                              privacy: {
-                                ...settings.privacy,
-                                profilePublic: e.target.checked
-                              }
-                            })}
+                            onChange={(e) => {
+                              const newSettings = {
+                                ...settings,
+                                privacy: {
+                                  ...settings.privacy,
+                                  profilePublic: e.target.checked
+                                }
+                              };
+                              setSettings(newSettings);
+                              handleAutoSaveSettings(newSettings);
+                            }}
                             className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
                           />
                           <span className="text-gray-700">Make my profile public</span>
@@ -894,13 +943,17 @@ export default function ProfileDashboard() {
                           <input 
                             type="checkbox" 
                             checked={settings.privacy.showEmail}
-                            onChange={(e) => setSettings({
-                              ...settings,
-                              privacy: {
-                                ...settings.privacy,
-                                showEmail: e.target.checked
-                              }
-                            })}
+                            onChange={(e) => {
+                              const newSettings = {
+                                ...settings,
+                                privacy: {
+                                  ...settings.privacy,
+                                  showEmail: e.target.checked
+                                }
+                              };
+                              setSettings(newSettings);
+                              handleAutoSaveSettings(newSettings);
+                            }}
                             className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
                           />
                           <span className="text-gray-700">Show my email on profile</span>
@@ -919,31 +972,40 @@ export default function ProfileDashboard() {
                           <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
                           <select 
                             value={settings.language}
-                            onChange={(e) => setSettings({
-                              ...settings,
-                              language: e.target.value
-                            })}
+                            onChange={(e) => {
+                              const newSettings = {
+                                ...settings,
+                                language: e.target.value
+                              };
+                              setSettings(newSettings);
+                              handleAutoSaveSettings(newSettings);
+                            }}
                             className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
                           >
                             <option value="en">English (US)</option>
                             <option value="am">አማርኛ (Amharic)</option>
                             <option value="fr">Français</option>
+                            <option value="es">Español</option>
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Region</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
                           <select 
-                            value={settings.region}
-                            onChange={(e) => setSettings({
-                              ...settings,
-                              region: e.target.value
-                            })}
+                            value={settings.currency || "USD"}
+                            onChange={(e) => {
+                              const newSettings = {
+                                ...settings,
+                                currency: e.target.value
+                              };
+                              setSettings(newSettings);
+                              handleAutoSaveSettings(newSettings);
+                            }}
                             className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
                           >
-                            <option value="US">United States</option>
-                            <option value="ET">Ethiopia</option>
-                            <option value="UK">United Kingdom</option>
-                            <option value="CA">Canada</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="ETB">Ethiopian Birr (ETB)</option>
+                            <option value="EUR">Euro (€)</option>
+                            <option value="GBP">British Pound (£)</option>
                           </select>
                         </div>
                       </div>

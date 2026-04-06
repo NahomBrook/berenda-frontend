@@ -1,4 +1,3 @@
-// frontend/src/app/properties/host/page.tsx
 "use client";
 
 import { useState, ChangeEvent, useEffect, useCallback } from "react";
@@ -320,6 +319,36 @@ export default function HostPropertyPage() {
     });
   };
 
+  // Add to wishlist function
+  const addToWishlist = async (propertyId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/auth/login");
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/favorites`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ propertyId }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        console.log("Added to wishlist");
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error adding to wishlist:", error);
+      return false;
+    }
+  };
+
   const handleSubmit = async () => {
     setError(null);
     setLoading(true);
@@ -343,6 +372,15 @@ export default function HostPropertyPage() {
 
       if (imageFiles.length > 0 && propertyId) {
         await uploadPropertyImages(propertyId, imageFiles);
+      }
+
+      // Ask user if they want to add to wishlist
+      const addToWishlistConfirm = window.confirm(
+        "Property listed successfully! Would you like to add it to your wishlist?"
+      );
+      
+      if (addToWishlistConfirm && propertyId) {
+        await addToWishlist(propertyId);
       }
 
       router.push(`/listings/${propertyId}`);

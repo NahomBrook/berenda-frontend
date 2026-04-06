@@ -36,7 +36,6 @@ export const uploadProfileImage = async (file: File, token: string) => {
   return res.json();
 };
 
-// Add these new functions
 export const getUserBookings = async (token: string) => {
   const res = await fetch(`${API_BASE}/bookings`, {
     headers: {
@@ -51,6 +50,37 @@ export const getFavorites = async (token: string) => {
     headers: {
       Authorization: `Bearer ${token}`,
     },
+  });
+  return res.json();
+};
+
+// Add these missing functions
+export const getUserProperties = async (token: string) => {
+  const res = await fetch(`${API_BASE}/properties/user/properties`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.json();
+};
+
+export const getSettings = async (token: string) => {
+  const res = await fetch(`${API_BASE}/users/settings`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.json();
+};
+
+export const updateUserSettings = async (settings: any, token: string) => {
+  const res = await fetch(`${API_BASE}/users/settings`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(settings),
   });
   return res.json();
 };
