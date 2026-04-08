@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { GoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
-import { isGmailAddress, getErrorMessage } from '../utils';
+import { getErrorMessage } from '../utils';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 
@@ -19,13 +19,12 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
+  // Login accepts any valid email (admin accounts may use non-Gmail addresses).
+  // Only registration requires Gmail.
   const validate = () => {
     const errs: { email?: string; password?: string } = {};
-    if (!email) {
-      errs.email = t('common.required');
-    } else if (!isGmailAddress(email)) {
-      errs.email = t('auth.gmailOnly');
-    }
+    if (!email) errs.email = t('common.required');
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = t('auth.invalidEmail');
     if (!password) errs.password = t('common.required');
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -37,6 +36,8 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
     try {
       await login(email, password);
+      // Admin users are redirected to /admin inside AuthContext.login.
+      // Non-admin users land on /messages.
       navigate('/messages');
     } catch (err) {
       toast.error(getErrorMessage(err));

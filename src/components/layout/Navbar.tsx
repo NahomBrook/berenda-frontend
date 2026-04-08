@@ -6,7 +6,7 @@ import Avatar from '../ui/Avatar';
 
 const Navbar: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -43,6 +43,11 @@ const Navbar: React.FC = () => {
               <NavLink to="/profile" active={isActive('/profile')}>
                 {t('nav.profile')}
               </NavLink>
+              {isAdmin && (
+                <NavLink to="/admin" active={isActive('/admin')}>
+                  🛡️ {t('nav.admin')}
+                </NavLink>
+              )}
             </>
           )}
         </div>
@@ -89,6 +94,15 @@ const Navbar: React.FC = () => {
                     >
                       💬 {t('nav.messages')}
                     </Link>
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-purple-700 hover:bg-purple-50"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        🛡️ {t('nav.admin')}
+                      </Link>
+                    )}
                     <hr className="my-1 border-gray-100" />
                     <button
                       onClick={handleLogout}

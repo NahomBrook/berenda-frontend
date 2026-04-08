@@ -9,6 +9,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string) => Promise<void>;
   googleLogin: (idToken: string) => Promise<void>;
@@ -18,6 +19,11 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'admin', 'super_admin'];
+
+const userIsAdmin = (u: User | null): boolean =>
+  !!u?.roles?.some((r) => ADMIN_ROLES.includes(r.name));
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { t } = useTranslation();
@@ -48,17 +54,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('berenda_user', JSON.stringify(userData));
   };
 
-  const login = async (email: string, password: string) => {
+  /** Core login — does NOT show a toast so callers can control messaging. */
+  const loginSilent = async (email: string, password: string): Promise<User> => {
     const res = await authAPI.login({ email, password });
     const { token: authToken, user: userData } = res.data.data;
     persistSession(userData, authToken);
+    return userData;
+  };
+
+  const login = async (email: string, password: string) => {
+    const userData = await loginSilent(email, password);
     toast.success(t('auth.loginSuccess'));
+    // Redirect admins immediately after login
+    if (userIsAdmin(userData)) {
+      window.location.href = '/admin';
+    }
   };
 
   const register = async (email: string, password: string, fullName: string) => {
     await authAPI.register({ email, password, fullName });
-    // Auto-login after registration
-    await login(email, password);
+    // Auto-login after registration (suppress login toast — show register toast only)
+    await loginSilent(email, password);
     toast.success(t('auth.registerSuccess'));
   };
 
@@ -67,6 +83,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { token: authToken, user: userData } = res.data.data;
     persistSession(userData, authToken);
     toast.success(t('auth.loginSuccess'));
+    if (userIsAdmin(userData)) {
+      window.location.href = '/admin';
+    }
   };
 
   const logout = useCallback(() => {
@@ -104,6 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isLoading,
         isAuthenticated: !!token && !!user,
+        isAdmin: userIsAdmin(user),
         login,
         register,
         googleLogin,

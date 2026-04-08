@@ -11,11 +11,60 @@ export interface User {
   roles: { name: string }[];
 }
 
-export interface AuthState {
-  user: User | null;
-  token: string | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
+export interface Property {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  monthlyPrice: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  maxGuests?: number;
+  area?: number;
+  isAvailable: boolean;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+  ownerId: string;
+  owner?: {
+    id: string;
+    fullName: string;
+    email: string;
+    profileImageUrl?: string;
+  };
+  media: PropertyMedia[];
+  amenities?: { amenity: { id: string; name: string } }[];
+  reviews?: { rating: number }[];
+  averageRating?: number | null;
+  reviewsCount?: number;
+}
+
+export interface PropertyMedia {
+  id: string;
+  propertyId: string;
+  mediaUrl: string;
+  mediaType: 'image' | 'video';
+  createdAt: string;
+}
+
+export interface Booking {
+  id: string;
+  propertyId: string;
+  renterId: string;
+  startDate: string;
+  endDate: string;
+  totalPrice?: number;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed' | 'pending_payment' | 'confirmed' | 'failed';
+  createdAt: string;
+  property?: {
+    id: string;
+    title: string;
+    location: string;
+    monthlyPrice: number;
+    media?: { mediaUrl: string }[];
+  };
 }
 
 export interface Chat {
@@ -44,10 +93,22 @@ export interface Message {
   readAt?: string | null;
 }
 
-export interface AIMessage {
+export interface FavoriteProperty {
   id: string;
-  senderId: string;
-  message: string;
-  createdAt: string;
-  isAi: boolean;
+  title: string;
+  location: string;
+  price: number;
+  imageUrl: string;
+  rating: number;
+  favoriteId: string;
+}
+
+export interface AdminDashboard {
+  totalUsers: number;
+  totalProperties: number;
+  totalBookings: number;
+  pendingProperties: number;
+  totalRevenue: number;
+  recentUsers: User[];
+  recentBookings: Booking[];
 }
