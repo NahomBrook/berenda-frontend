@@ -4,11 +4,44 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore, startOfDay } from "date-fns";
+import { useLanguage } from "@/context/LanguageContext";
 
-const ethiopianMonths = [
+// Ethiopian calendar months (12 months of 30 days + 1 short month)
+const ET_MONTHS_EN = [
   "Meskerem", "Tikimt", "Hidar", "Tahsas", "Tir", "Yekatit",
-  "Megabit", "Miyazya", "Gnbot", "Sene", "Hamle", "Nehase"
+  "Megabit", "Miyazya", "Gnbot", "Sene", "Hamle", "Nehase", "Pagume"
 ];
+const ET_MONTHS_AM = [
+  "መስከረም", "ጥቅምት", "ህዳር", "ታህሳስ", "ጥር", "የካቲት",
+  "መጋቢት", "ሚያዝያ", "ግንቦት", "ሰኔ", "ሐምሌ", "ነሃሴ", "ጳጉሜ"
+];
+
+/**
+ * Convert a Gregorian Date to Ethiopian calendar.
+ * Ethiopian calendar is approximately 7 years and 8 months behind Gregorian.
+ * Algorithm: Julian Day Number based conversion.
+ */
+function gregorianToEthiopian(date: Date): { year: number; month: number; day: number } {
+  const jdn = gregorianToJDN(date.getFullYear(), date.getMonth() + 1, date.getDate());
+  return jdnToEthiopian(jdn);
+}
+
+function gregorianToJDN(year: number, month: number, day: number): number {
+  const a = Math.floor((14 - month) / 12);
+  const y = year + 4800 - a;
+  const m = month + 12 * a - 3;
+  return day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+}
+
+function jdnToEthiopian(jdn: number): { year: number; month: number; day: number } {
+  // Ethiopian epoch JDN = 1724221 (Meskerem 1, 1 EC = Aug 29, 8 AD Julian)
+  const r = (jdn - 1724221) % 1461;
+  const n = r % 365 + 365 * Math.floor(r / 1460);
+  const year = 4 * Math.floor((jdn - 1724221) / 1461) + Math.floor(r / 365) - Math.floor(r / 1460);
+  const month = Math.floor(n / 30) + 1;
+  const day = (n % 30) + 1;
+  return { year, month: Math.min(month, 13), day };
+}
 
 interface DateRangePickerProps {
   checkIn: Date | null;
@@ -25,6 +58,7 @@ export function DateRangePicker({
   onCheckOutChange,
   onClose,
 }: DateRangePickerProps) {
+  const { language, t } = useLanguage();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarType, setCalendarType] = useState<"gregorian" | "ethiopian">("gregorian");
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
@@ -33,7 +67,6 @@ export function DateRangePicker({
   const [isSelectingCheckOut, setIsSelectingCheckOut] = useState(false);
   const [animateDate, setAnimateDate] = useState<string | null>(null);
 
-  // Animation effect when dates are selected
   useEffect(() => {
     if (selectedCheckIn) {
       setAnimateDate("checkin");
@@ -55,7 +88,7 @@ export function DateRangePicker({
       setSelectedCheckIn(date);
       setSelectedCheckOut(null);
       setIsSelectingCheckOut(true);
-      
+
       setTimeout(() => {
         const checkOutSection = document.querySelector('.checkout-section');
         if (checkOutSection) {
@@ -63,8 +96,7 @@ export function DateRangePicker({
           setTimeout(() => checkOutSection.classList.remove('animate-pulse'), 1000);
         }
       }, 100);
-    }
-    else if (selectedCheckIn && !selectedCheckOut) {
+    } else if (selectedCheckIn && !selectedCheckOut) {
       if (date < selectedCheckIn) {
         setSelectedCheckIn(date);
         setSelectedCheckOut(selectedCheckIn);
@@ -72,8 +104,7 @@ export function DateRangePicker({
         setSelectedCheckOut(date);
         setIsSelectingCheckOut(false);
       }
-    }
-    else if (selectedCheckIn && selectedCheckOut) {
+    } else if (selectedCheckIn && selectedCheckOut) {
       setSelectedCheckIn(date);
       setSelectedCheckOut(null);
       setIsSelectingCheckOut(true);
@@ -107,7 +138,7 @@ export function DateRangePicker({
   };
 
   const isSelected = (date: Date) => {
-    return (selectedCheckIn && isSameDay(date, selectedCheckIn)) || 
+    return (selectedCheckIn && isSameDay(date, selectedCheckIn)) ||
            (selectedCheckOut && isSameDay(date, selectedCheckOut));
   };
 
@@ -119,20 +150,21 @@ export function DateRangePicker({
     if (calendarType === "gregorian") {
       return format(currentMonth, "MMMM yyyy");
     } else {
-      const monthIndex = currentMonth.getMonth() + 3;
-      const yearOffset = monthIndex >= 12 ? 1 : 0;
-      const ethiopianYear = currentMonth.getFullYear() - 8 + yearOffset;
-      const ethiopianMonth = monthIndex % 12;
-      return `${ethiopianMonths[ethiopianMonth]} ${ethiopianYear}`;
+      // Show the Ethiopian month that corresponds to most days in this Gregorian month
+      const midMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 15);
+      const et = gregorianToEthiopian(midMonth);
+      const monthNames = language === "am" ? ET_MONTHS_AM : ET_MONTHS_EN;
+      const monthName = monthNames[et.month - 1] || monthNames[0];
+      return `${monthName} ${et.year}`;
     }
   };
 
   const getDayDisplay = (date: Date) => {
-    if (calendarType === "gregorian") {
-      return format(date, "d");
-    } else {
-      return format(date, "d");
+    if (calendarType === "ethiopian") {
+      const et = gregorianToEthiopian(date);
+      return String(et.day);
     }
+    return format(date, "d");
   };
 
   const navigateMonth = (direction: "prev" | "next") => {
@@ -140,22 +172,28 @@ export function DateRangePicker({
   };
 
   const days = getDaysInMonth();
-  const weekDays = calendarType === "gregorian" 
+  const weekDays = calendarType === "gregorian"
     ? ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
     : ["እሑ", "ሰኞ", "ማክ", "ረቡ", "ሐሙ", "ዓር", "ቅዳ"];
 
+  const formatDisplayDate = (date: Date) => {
+    if (calendarType === "ethiopian") {
+      const et = gregorianToEthiopian(date);
+      const monthNames = language === "am" ? ET_MONTHS_AM : ET_MONTHS_EN;
+      const monthName = monthNames[et.month - 1] || monthNames[0];
+      return `${monthName} ${et.day}, ${et.year}`;
+    }
+    return format(date, "MMM d, yyyy");
+  };
+
   const getDateRangeText = () => {
     if (selectedCheckIn && selectedCheckOut) {
-      if (calendarType === "gregorian") {
-        return `${format(selectedCheckIn, "MMM d")} - ${format(selectedCheckOut, "MMM d, yyyy")}`;
-      } else {
-        return `${format(selectedCheckIn, "MMM d")} - ${format(selectedCheckOut, "MMM d, yyyy")}`;
-      }
+      return `${formatDisplayDate(selectedCheckIn)} - ${formatDisplayDate(selectedCheckOut)}`;
     }
     if (selectedCheckIn) {
-      return `${format(selectedCheckIn, "MMM d")} - Select check-out`;
+      return `${formatDisplayDate(selectedCheckIn)} - ${t("calendar.selectCheckoutPrompt")}`;
     }
-    return "Select dates";
+    return t("calendar.selectDates");
   };
 
   return (
@@ -172,7 +210,7 @@ export function DateRangePicker({
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              Gregorian
+              {t("calendar.gregorian")}
             </button>
             <button
               onClick={() => setCalendarType("ethiopian")}
@@ -182,11 +220,11 @@ export function DateRangePicker({
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              Ethiopian
+              {t("calendar.ethiopian")}
             </button>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <X className="w-5 h-5" />
@@ -198,33 +236,28 @@ export function DateRangePicker({
           <div className="bg-gray-50 rounded-xl p-4">
             <div className="flex items-center justify-between gap-4">
               <div className={`flex-1 text-center transition-all duration-300 ${selectedCheckIn ? 'scale-105' : ''}`}>
-                <p className="text-xs font-medium text-gray-500 mb-1">CHECK-IN</p>
+                <p className="text-xs font-medium text-gray-500 mb-1">{t("calendar.checkIn")}</p>
                 <p className={`text-lg font-semibold transition-all duration-300 ${
-                  selectedCheckIn 
-                    ? 'text-red-500 scale-110' 
-                    : 'text-gray-400'
+                  selectedCheckIn ? 'text-red-500 scale-110' : 'text-gray-400'
                 }`}>
-                  {selectedCheckIn 
-                    ? format(selectedCheckIn, "MMM d, yyyy")
-                    : "Select date"
-                  }
+                  {selectedCheckIn ? formatDisplayDate(selectedCheckIn) : t("calendar.selectDate")}
                 </p>
               </div>
               <ArrowRight className="w-5 h-5 text-gray-400 animate-pulse" />
               <div className={`flex-1 text-center transition-all duration-300 ${isSelectingCheckOut ? 'scale-105' : ''}`}>
-                <p className="text-xs font-medium text-gray-500 mb-1">CHECK-OUT</p>
+                <p className="text-xs font-medium text-gray-500 mb-1">{t("calendar.checkOut")}</p>
                 <p className={`text-lg font-semibold transition-all duration-300 ${
-                  selectedCheckOut 
-                    ? 'text-red-500 scale-110' 
-                    : isSelectingCheckOut 
-                      ? 'text-orange-500 animate-pulse' 
+                  selectedCheckOut
+                    ? 'text-red-500 scale-110'
+                    : isSelectingCheckOut
+                      ? 'text-orange-500 animate-pulse'
                       : 'text-gray-400'
                 }`}>
-                  {selectedCheckOut 
-                    ? format(selectedCheckOut, "MMM d, yyyy")
-                    : isSelectingCheckOut 
-                      ? "Select check-out date"
-                      : "Not selected"
+                  {selectedCheckOut
+                    ? formatDisplayDate(selectedCheckOut)
+                    : isSelectingCheckOut
+                      ? t("calendar.selectCheckOut")
+                      : t("calendar.notSelected")
                   }
                 </p>
               </div>
@@ -299,12 +332,12 @@ export function DateRangePicker({
                   </span>
                   {isStart && (
                     <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs text-red-500 font-medium whitespace-nowrap animate-fadeIn">
-                      Check-in
+                      {t("calendar.checkInLabel")}
                     </div>
                   )}
                   {isEnd && (
                     <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs text-red-500 font-medium whitespace-nowrap animate-fadeIn">
-                      Check-out
+                      {t("calendar.checkOutLabel")}
                     </div>
                   )}
                 </button>
@@ -326,7 +359,7 @@ export function DateRangePicker({
                   onClick={handleClear}
                   className="flex-1 sm:flex-none px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200 hover:scale-105"
                 >
-                  Clear
+                  {t("calendar.clear")}
                 </button>
                 <button
                   onClick={handleApply}
@@ -337,7 +370,7 @@ export function DateRangePicker({
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
                   }`}
                 >
-                  Done
+                  {t("calendar.done")}
                 </button>
               </div>
             </div>

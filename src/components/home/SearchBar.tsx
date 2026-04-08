@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DateRangePicker } from "../DateRangePicker";
 import { FilterModal } from "../FilterModal";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface Location {
   id: string;
@@ -22,6 +23,7 @@ interface SearchBarProps {
 export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
   
@@ -163,7 +165,7 @@ export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps
   };
 
   const formatDate = (date: Date | null) => {
-    if (!date) return "Add date";
+    if (!date) return t("search.addDate");
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
@@ -203,10 +205,10 @@ export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps
               <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
                 <MapPin className="w-5 h-5 text-red-500 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Where</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("search.where")}</p>
                   <input
                     className="text-gray-800 text-sm outline-none bg-transparent w-full font-medium"
-                    placeholder="Search destinations"
+                    placeholder={t("search.destinations")}
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     onFocus={() => setActiveField('location')}
@@ -247,7 +249,7 @@ export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps
                 className="bg-gray-50 rounded-xl p-3 text-left hover:bg-gray-100 transition"
               >
                 <Calendar className="w-4 h-4 text-red-500 mb-1" />
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Check In</p>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("search.checkIn")}</p>
                 <p className="text-sm font-medium text-gray-800 truncate">
                   {formatDate(checkIn)}
                 </p>
@@ -257,7 +259,7 @@ export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps
                 className="bg-gray-50 rounded-xl p-3 text-left hover:bg-gray-100 transition"
               >
                 <Calendar className="w-4 h-4 text-red-500 mb-1" />
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Check Out</p>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("search.checkOut")}</p>
                 <p className="text-sm font-medium text-gray-800 truncate">
                   {formatDate(checkOut)}
                 </p>
@@ -272,7 +274,7 @@ export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps
               >
                 <SlidersHorizontal className="w-4 h-4 text-gray-600" />
                 <span className="text-sm font-medium text-gray-700">
-                  Filters {hasActiveFilters() && `(${filters.homeType.length + filters.amenities.length})`}
+                  {t("search.filters")} {hasActiveFilters() && `(${filters.homeType.length + filters.amenities.length})`}
                 </span>
               </button>
               <button
@@ -292,11 +294,11 @@ export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps
               <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 rounded-full transition">
                 <MapPin className="w-5 h-5 text-red-500 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Where</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("search.where")}</p>
                   <div className="relative">
                     <input
                       className="text-gray-800 text-sm outline-none bg-transparent w-full font-medium pr-6"
-                      placeholder="Search destinations"
+                      placeholder={t("search.destinations")}
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       onFocus={() => setActiveField('location')}
@@ -348,7 +350,7 @@ export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps
               onBlur={() => setTimeout(() => setActiveField(null), 200)}
             >
               <div className="px-4 py-3 hover:bg-gray-50 rounded-full transition">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Check In</p>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("search.checkIn")}</p>
                 <p className={`text-sm font-medium truncate ${checkIn ? 'text-gray-800' : 'text-gray-400'}`}>
                   {formatDate(checkIn)}
                 </p>
@@ -365,7 +367,7 @@ export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps
               onBlur={() => setTimeout(() => setActiveField(null), 200)}
             >
               <div className="px-4 py-3 hover:bg-gray-50 rounded-full transition">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Check Out</p>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("search.checkOut")}</p>
                 <p className={`text-sm font-medium truncate ${checkOut ? 'text-gray-800' : 'text-gray-400'}`}>
                   {formatDate(checkOut)}
                 </p>

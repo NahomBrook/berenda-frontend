@@ -11,8 +11,9 @@ import {
   uploadPropertyImages,
 } from "../../../utils/api";
 import Navbar from "@/components/layout/Navbar";
-import { MessageCircle, Bed, Bath, Users, Maximize2, Calendar, Home, Wifi, Coffee, Car, Tv, Dumbbell, Waves, Wind, Utensils, ParkingCircle, Dog, Sparkles } from "lucide-react";
+import { MessageCircle, Bed, Bath, Users, Maximize2, Calendar, Home, Wifi, Coffee, Car, Tv, Dumbbell, Waves, Wind, Utensils, ParkingCircle, Dog, Sparkles, CheckCircle } from "lucide-react";
 import { DateRangePicker } from "@/components/DateRangePicker";
+import { useLanguage } from "@/context/LanguageContext";
 
 // Dynamically import map component with no SSR and ensure it's rendered with lower z-index
 const PropertyMapDisplay = dynamic(
@@ -73,6 +74,7 @@ const amenityIcons: Record<string, any> = {
 export default function PropertyDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useLanguage();
   const propertyId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [property, setProperty] = useState<Property | null>(null);
@@ -104,6 +106,8 @@ export default function PropertyDetailPage() {
   
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
 
   const safeMonthlyPrice = property?.monthlyPrice || 0;
   const safeTitle = property?.title || '';
@@ -253,22 +257,36 @@ export default function PropertyDetailPage() {
     }
   };
 
-  const handleProceedToPayment = () => {
-    const bookingDetails = {
-      propertyId,
-      propertyTitle: property?.title,
-      propertyLocation: property?.location,
-      checkIn: checkIn?.toISOString(),
-      checkOut: checkOut?.toISOString(),
-      guests,
-      totalPrice: availabilityResult?.price?.total || 0,
-      nightlyRate: availabilityResult?.price?.dailyRate || (safeMonthlyPrice / 30),
-      nights: availabilityResult?.price?.nights || 0,
-      monthlyPrice: property?.monthlyPrice,
-    };
-    
-    sessionStorage.setItem('bookingDetails', JSON.stringify(bookingDetails));
-    router.push(`/payment/${propertyId}`);
+  const handleConfirmBooking = async () => {
+    const token = localStorage.getItem("berenda_token");
+    if (!token) { router.push("/auth/login"); return; }
+
+    try {
+      setBookingLoading(true);
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      const response = await fetch(`${API_BASE_URL}/bookings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          propertyId,
+          checkIn: checkIn?.toISOString(),
+          checkOut: checkOut?.toISOString(),
+          guests,
+          totalPrice: availabilityResult?.price?.total || 0,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Failed to create booking");
+      setBookingConfirmed(true);
+      setBookingStep('details');
+    } catch (err: any) {
+      setMessage({ text: err.message || "Failed to confirm booking.", type: "error" });
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   const handleContactHost = async () => {
@@ -650,36 +668,58 @@ export default function PropertyDetailPage() {
                         : 'bg-red-600 text-white hover:bg-red-700'
                     }`}
                   >
-                    {checkingAvailability ? 'Checking availability...' : 'Check Availability'}
+                    {checkingAvailability ? t("listings.checkingAvailability") : t("listings.checkAvailability")}
                   </button>
                 </div>
               )}
 
-              {bookingStep === 'payment' && availabilityResult?.eligible && (
+              {bookingConfirmed && (
+                <div className="space-y-4 text-center py-2">
+                  <CheckCircle className="w-14 h-14 text-green-500 mx-auto" />
+                  <h3 className="text-lg font-semibold text-gray-900">{t("booking.confirmed.title")}</h3>
+                  <p className="text-gray-600 text-sm">{t("booking.confirmed.message")}</p>
+                  <p className="text-gray-500 text-xs font-medium">{t("booking.confirmed.waitCall")}</p>
+                  <button
+                    onClick={() => router.push("/profile")}
+                    className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition font-medium text-sm"
+                  >
+                    {t("booking.confirmed.viewBookings")}
+                  </button>
+                  <button
+                    onClick={() => router.push("/")}
+                    className="w-full text-gray-500 text-sm hover:text-gray-700"
+                  >
+                    {t("booking.confirmed.backHome")}
+                  </button>
+                </div>
+              )}
+
+              {!bookingConfirmed && bookingStep === 'payment' && availabilityResult?.eligible && (
                 <div className="space-y-4">
                   <div className="bg-green-50 p-3 rounded-lg">
-                    <p className="text-green-700 text-sm">✓ {availabilityResult.message || "Property is available for your dates!"}</p>
+                    <p className="text-green-700 text-sm">✓ {availabilityResult.message || t("listings.checkAvailability")}</p>
                   </div>
 
                   <div className="border-t border-gray-100 pt-4">
-                    <h3 className="font-medium text-gray-900 mb-2">Price breakdown</h3>
+                    <h3 className="font-medium text-gray-900 mb-2">{t("listings.priceBreakdown")}</h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">${availabilityResult.price?.dailyRate?.toFixed(2)} x {availabilityResult.price?.nights} nights</span>
-                        <span className="text-gray-900">${availabilityResult.price?.total?.toFixed(2)}</span>
+                        <span className="text-gray-600">ETB {availabilityResult.price?.dailyRate?.toFixed(2)} x {availabilityResult.price?.nights} nights</span>
+                        <span className="text-gray-900">ETB {availabilityResult.price?.total?.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between pt-2 border-t border-gray-100">
-                        <span className="font-medium text-gray-900">Total (USD)</span>
-                        <span className="font-semibold text-red-600">${availabilityResult.price?.total?.toFixed(2)}</span>
+                        <span className="font-medium text-gray-900">{t("listings.total")}</span>
+                        <span className="font-semibold text-red-600">ETB {availabilityResult.price?.total?.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
 
                   <button
-                    onClick={handleProceedToPayment}
-                    className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition font-medium"
+                    onClick={handleConfirmBooking}
+                    disabled={bookingLoading}
+                    className={`w-full py-3 rounded-lg transition font-medium ${bookingLoading ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'}`}
                   >
-                    Proceed to Payment
+                    {bookingLoading ? t("common.loading") : t("listings.confirmBooking")}
                   </button>
 
                   <button
@@ -689,14 +729,14 @@ export default function PropertyDetailPage() {
                     }}
                     className="w-full text-gray-500 text-sm hover:text-gray-700"
                   >
-                    Change dates
+                    {t("listings.changeDates")}
                   </button>
                 </div>
               )}
 
-              {bookingStep === 'payment' && !availabilityResult?.eligible && (
+              {!bookingConfirmed && bookingStep === 'payment' && !availabilityResult?.eligible && (
                 <div className="text-center py-4">
-                  <p className="text-red-500 mb-2">{availabilityResult?.message || "Not available for selected dates"}</p>
+                  <p className="text-red-500 mb-2">{availabilityResult?.message || t("listings.notAvailable")}</p>
                   <button
                     onClick={() => {
                       setBookingStep('details');
@@ -704,7 +744,7 @@ export default function PropertyDetailPage() {
                     }}
                     className="text-red-600 hover:text-red-700"
                   >
-                    Try different dates
+                    {t("listings.tryDifferentDates")}
                   </button>
                 </div>
               )}
