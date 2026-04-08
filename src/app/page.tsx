@@ -42,7 +42,7 @@ export default function Home() {
       if (f.maxPrice && f.maxPrice < 5000) params.maxPrice = f.maxPrice;
       if (f.bedrooms) params.bedrooms = f.bedrooms;
       const response = await propertyAPI.list(params);
-      const data = response.data?.properties || response.data || [];
+      const data = response.data?.data || [];
       setProperties(data);
       setError(null);
     } catch (err) {

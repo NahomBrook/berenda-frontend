@@ -20,7 +20,7 @@ export default function PaymentPage({ searchParams }: { searchParams: { bookingI
     setError("");
 
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("berenda_token");
       const response = await fetch(`${API_BASE_URL}/payments/initialize`, {
         method: "POST",
         headers: {

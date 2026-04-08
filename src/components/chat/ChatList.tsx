@@ -28,7 +28,7 @@ export default function ChatList({ onSelectChat, selectedChatId }: ChatListProps
 
   const fetchChats = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("berenda_token");
       if (!token) {
         router.push("/auth/login");
         return;

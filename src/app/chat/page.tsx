@@ -14,7 +14,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     // Check authentication
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("berenda_token");
     if (!token) {
       router.push("/auth/login");
     }

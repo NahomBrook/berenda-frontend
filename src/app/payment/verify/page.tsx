@@ -24,7 +24,7 @@ export default function PaymentVerifyPage() {
 
     const verifyTransaction = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("berenda_token");
         const res = await fetch(`${API_BASE_URL}/payments/verify/${tx_ref}`, {
           method: "GET",
           headers: {

@@ -111,7 +111,7 @@ export default function HostPropertyPage() {
   // Check authentication
   useEffect(() => {
     if (!isMounted) return;
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("berenda_token");
     if (!token) {
       router.push("/auth/login");
     } else {
@@ -322,7 +322,7 @@ export default function HostPropertyPage() {
   // Add to wishlist function
   const addToWishlist = async (propertyId: string) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("berenda_token");
       if (!token) {
         router.push("/auth/login");
         return;

@@ -111,7 +111,7 @@ export default function PropertyDetailPage() {
   const safeDescription = property?.description || '';
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("berenda_user");
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
@@ -196,7 +196,7 @@ export default function PropertyDetailPage() {
   const handleCheckAvailability = async () => {
     if (!propertyId) return;
     
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("berenda_token");
     if (!token) {
       router.push("/auth/login");
       return;
@@ -272,7 +272,7 @@ export default function PropertyDetailPage() {
   };
 
   const handleContactHost = async () => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("berenda_token");
     if (!token) {
       router.push("/auth/login");
       return;

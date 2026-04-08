@@ -13,8 +13,8 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const router = useRouter();
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem("berenda_token");
+    localStorage.removeItem("berenda_user");
     router.push("/auth/login");
   };
 

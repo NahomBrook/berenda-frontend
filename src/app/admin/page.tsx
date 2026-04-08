@@ -30,8 +30,8 @@ export default function AdminPage() {
 
   // Check authentication and admin role
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userStr = localStorage.getItem("user");
+    const token = localStorage.getItem("berenda_token");
+    const userStr = localStorage.getItem("berenda_user");
     
     if (!token) {
       router.push("/auth/login");

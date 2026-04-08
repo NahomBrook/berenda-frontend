@@ -87,7 +87,7 @@ export default function PaymentPage() {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("berenda_token");
       if (!token) {
         router.push("/auth/login");
         return;

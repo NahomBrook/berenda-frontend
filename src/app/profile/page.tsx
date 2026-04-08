@@ -123,7 +123,7 @@ export default function ProfileDashboard() {
   ];
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
+    const storedToken = localStorage.getItem("berenda_token");
     if (!storedToken) {
       router.push("/auth/login");
       return;
@@ -325,8 +325,8 @@ export default function ProfileDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem("berenda_token");
+    localStorage.removeItem("berenda_user");
     router.push("/");
   };
 

@@ -29,7 +29,7 @@ export default function ChatRoom({ chatId, onBack }: ChatRoomProps) {
     setIsAIChat(chatId === 'ai-assistant');
     
     // Get current user
-    const user = localStorage.getItem("user");
+    const user = localStorage.getItem("berenda_user");
     if (user) {
       try {
         const parsedUser = JSON.parse(user);

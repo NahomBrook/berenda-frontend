@@ -3,7 +3,7 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
 
 const getToken = () => {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("token");
+  return localStorage.getItem("berenda_token");
 };
 
 const handleResponse = async (response: Response) => {
