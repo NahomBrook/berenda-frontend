@@ -1,198 +1,218 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
-import { useLanguage } from '@/context/LanguageContext';
-import Avatar from '../ui/Avatar';
-
-interface UserData {
-  fullName?: string;
-  email?: string;
-  profileImageUrl?: string;
-  roles?: { name: string }[];
-}
+import { useState, useEffect } from "react";
+import { Globe, User, MessageCircle, Search, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface NavbarProps {
   onSearchClick?: () => void;
   showSearchButton?: boolean;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onSearchClick, showSearchButton }) => {
-  const { language, toggleLanguage, t } = useLanguage();
+export default function Navbar({ onSearchClick, showSearchButton = false }: NavbarProps) {
   const router = useRouter();
-  const pathname = usePathname();
-  const [user, setUser] = useState<UserData | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+  const [user, setUser] = useState<{ fullName: string; roles?: { name: string }[] } | null>(null);
+  const [unreadCount] = useState(0);
+  const { language, setLanguage, t } = useLanguage();
 
   useEffect(() => {
-    const token = localStorage.getItem('berenda_token');
-    const stored = localStorage.getItem('berenda_user');
-    if (token && stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        setUser(null);
+    const token = localStorage.getItem("berenda_token");
+    if (token) {
+      const storedUser = localStorage.getItem("berenda_user");
+      if (storedUser && storedUser !== "undefined") {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          setUser({ fullName: "User" });
+        }
+      } else {
+        setUser({ fullName: "User" });
       }
     }
-  }, [pathname]); // re-check on route change
+  }, []);
 
-  const isAuthenticated = !!user;
   const isAdmin = user?.roles?.some(
-    (r) => r.name === 'ADMIN' || r.name === 'SUPER_ADMIN' || r.name === 'admin' || r.name === 'super_admin'
+    (r) => r.name === "ADMIN" || r.name === "SUPER_ADMIN" || r.name === "admin" || r.name === "super_admin"
   );
 
   const handleLogout = () => {
-    localStorage.removeItem('berenda_token');
-    localStorage.removeItem('berenda_user');
+    localStorage.removeItem("berenda_token");
+    localStorage.removeItem("berenda_user");
     setUser(null);
-    setMenuOpen(false);
-    router.push('/auth/login');
+    setIsDropdownOpen(false);
+    router.push("/");
   };
 
-  const isActive = (path: string) => pathname === path;
+  const handleHostClick = () => {
+    const token = localStorage.getItem("berenda_token");
+    if (!token) router.push("/auth/login");
+    else router.push("/properties/host");
+  };
+
+  const handleLanguageChange = (lang: "en" | "am") => {
+    setLanguage(lang);
+    setIsLanguageDropdownOpen(false);
+  };
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl text-red-500 shrink-0">
-          <span className="text-2xl">🏠</span>
-          <span>Berenda</span>
-        </Link>
+    <nav className="w-full flex justify-between items-center px-6 py-4 bg-white shadow-sm sticky top-0 z-40 transition-all duration-300">
+      {/* Left: Logo */}
+      <div
+        className="flex items-center gap-2 font-bold text-xl cursor-pointer"
+        onClick={() => router.push("/")}
+      >
+        <div className="w-8 h-8 bg-red-600 rounded-full" />
+        <span>Berenda</span>
+      </div>
 
-        {/* Search button (shown when user scrolls past hero search bar) */}
+      {/* Center: Nav Links */}
+      <div className="hidden md:flex gap-6 font-medium text-gray-700">
+        <span
+          className="cursor-pointer hover:text-gray-900 transition-colors"
+          onClick={() => router.push("/")}
+        >
+          {t("nav.home") || "Home"}
+        </span>
+
+        {showSearchButton && (
+          <span
+            className="cursor-pointer hover:text-red-600 transition-colors flex items-center gap-1"
+            onClick={onSearchClick}
+          >
+            <Search className="w-4 h-4" />
+            {t("common.search") || "Search"}
+          </span>
+        )}
+      </div>
+
+      {/* Right: Actions */}
+      <div className="flex items-center gap-4 relative">
+        {/* Search Button - Mobile */}
         {showSearchButton && (
           <button
             onClick={onSearchClick}
-            className="hidden md:flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 rounded-full shadow-sm hover:shadow-md transition-shadow text-gray-600"
+            className="md:hidden p-1 hover:bg-gray-100 rounded-full transition"
           >
-            <span>Search</span>
-            <span className="bg-red-500 text-white rounded-full p-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </span>
+            <Search className="w-5 h-5 text-gray-700" />
           </button>
         )}
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-1">
-          {isAuthenticated && (
+        {/* Host Button */}
+        <span
+          className="hidden md:block cursor-pointer hover:text-gray-900 transition-colors"
+          onClick={handleHostClick}
+        >
+          {t("nav.host") || "+ Host a Berenda"}
+        </span>
+
+        {/* Chat / Messages Button */}
+        <button
+          onClick={() => router.push("/chat")}
+          className="relative p-1 hover:bg-gray-100 rounded-full transition"
+        >
+          <MessageCircle className="w-5 h-5 text-gray-700" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
+
+        {/* Language Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <Globe className="w-5 h-5 text-gray-700" />
+            <ChevronDown className="w-3 h-3 text-gray-500" />
+          </button>
+
+          {isLanguageDropdownOpen && (
             <>
-              <NavLink href="/chat" active={isActive('/chat')}>
-                {t('nav.messages') || 'Messages'}
-              </NavLink>
-              <NavLink href="/profile" active={isActive('/profile')}>
-                {t('nav.profile') || 'Profile'}
-              </NavLink>
-              {isAdmin && (
-                <NavLink href="/admin" active={isActive('/admin')}>
-                  🛡️ {t('nav.admin') || 'Admin'}
-                </NavLink>
-              )}
+              <div className="fixed inset-0 z-10" onClick={() => setIsLanguageDropdownOpen(false)} />
+              <div className="absolute right-0 mt-2 w-36 bg-white rounded-lg shadow-lg border border-gray-200 z-20 overflow-hidden">
+                <button
+                  onClick={() => handleLanguageChange("en")}
+                  className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                    language === "en" ? "bg-red-50 text-red-600" : "text-gray-700"
+                  }`}
+                >
+                  <span>English</span>
+                  {language === "en" && <span className="text-red-600">✓</span>}
+                </button>
+                <button
+                  onClick={() => handleLanguageChange("am")}
+                  className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                    language === "am" ? "bg-red-50 text-red-600" : "text-gray-700"
+                  }`}
+                >
+                  <span>አማርኛ</span>
+                  {language === "am" && <span className="text-red-600">✓</span>}
+                </button>
+              </div>
             </>
           )}
         </div>
 
-        {/* Right side */}
-        <div className="flex items-center gap-2">
-          {/* Language toggle */}
-          <button
-            onClick={toggleLanguage}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-          >
-            {language === 'en' ? '🇪🇹 አማ' : '🇺🇸 EN'}
-          </button>
+        {/* Profile / Auth Dropdown */}
+        <div
+          className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white font-medium cursor-pointer hover:bg-red-700 transition-colors"
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        >
+          {user ? user.fullName[0].toUpperCase() : <User className="w-5 h-5" />}
+        </div>
 
-          {isAuthenticated ? (
-            <div className="relative">
-              <button
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <Avatar src={user?.profileImageUrl} name={user?.fullName} size="sm" />
-              </button>
-
-              {menuOpen && (
+        {isDropdownOpen && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
+            <div className="absolute right-0 top-12 bg-white border shadow-md rounded-md w-40 flex flex-col z-50 overflow-hidden">
+              {!user ? (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <p className="text-sm font-medium text-gray-900 truncate">{user?.fullName}</p>
-                      <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                    </div>
-                    <Link
-                      href="/profile"
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      👤 {t('nav.profile') || 'Profile'}
-                    </Link>
-                    <Link
-                      href="/chat"
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      💬 {t('nav.messages') || 'Messages'}
-                    </Link>
-                    {isAdmin && (
-                      <Link
-                        href="/admin"
-                        className="flex items-center gap-2 px-4 py-2 text-sm text-purple-700 hover:bg-purple-50"
-                        onClick={() => setMenuOpen(false)}
-                      >
-                        🛡️ {t('nav.admin') || 'Admin'}
-                      </Link>
-                    )}
-                    <hr className="my-1 border-gray-100" />
+                  <button
+                    className="px-4 py-2 text-left hover:bg-gray-100 transition-colors"
+                    onClick={() => { router.push("/auth/register"); setIsDropdownOpen(false); }}
+                  >
+                    {t("nav.register") || "Register"}
+                  </button>
+                  <button
+                    className="px-4 py-2 text-left hover:bg-gray-100 transition-colors"
+                    onClick={() => { router.push("/auth/login"); setIsDropdownOpen(false); }}
+                  >
+                    {t("nav.login") || "Login"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="px-4 py-2 text-left hover:bg-gray-100 transition-colors"
+                    onClick={() => { router.push("/profile"); setIsDropdownOpen(false); }}
+                  >
+                    {t("nav.profile") || "Profile"}
+                  </button>
+                  {isAdmin && (
                     <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      className="px-4 py-2 text-left hover:bg-purple-50 text-purple-700 transition-colors"
+                      onClick={() => { router.push("/admin"); setIsDropdownOpen(false); }}
                     >
-                      🚪 {t('nav.logout') || 'Logout'}
+                      🛡️ {t("nav.admin") || "Admin"}
                     </button>
-                  </div>
+                  )}
+                  <button
+                    className="px-4 py-2 text-left hover:bg-gray-100 transition-colors"
+                    onClick={handleLogout}
+                  >
+                    {t("nav.logout") || "Logout"}
+                  </button>
                 </>
               )}
             </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Link
-                href="/auth/login"
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-red-500 transition-colors"
-              >
-                {t('nav.login') || 'Login'}
-              </Link>
-              <Link
-                href="/auth/register"
-                className="px-4 py-2 text-sm font-medium bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors"
-              >
-                {t('nav.register') || 'Register'}
-              </Link>
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </nav>
   );
-};
-
-const NavLink: React.FC<{ href: string; active?: boolean; children: React.ReactNode }> = ({
-  href,
-  active,
-  children,
-}) => (
-  <Link
-    href={href}
-    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-      active
-        ? 'bg-red-50 text-red-500'
-        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-    }`}
-  >
-    {children}
-  </Link>
-);
-
-export default Navbar;
+}
