@@ -10,26 +10,18 @@ export const getProfile = async (token: string) => {
   return res.json();
 };
 
-export const updateProfile = async (data: any, token: string) => {
-  const res = await fetch(`${API_BASE}/users/profile`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
-  return res.json();
-};
-
-export const uploadProfileImage = async (file: File, token: string) => {
+// Single PUT call — backend route is PUT /users/profile with multer("avatar")
+export const updateProfile = async (data: any, token: string, imageFile?: File) => {
   const formData = new FormData();
-  formData.append("profileImage", file);
+  if (data.fullName) formData.append("fullName", data.fullName);
+  if (data.phone) formData.append("phone", data.phone);
+  if (imageFile) formData.append("avatar", imageFile);
 
-  const res = await fetch(`${API_BASE}/users/profile/image`, {
-    method: "POST",
+  const res = await fetch(`${API_BASE}/users/profile`, {
+    method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
+      // Do NOT set Content-Type — browser sets it with the correct boundary for multipart
     },
     body: formData,
   });

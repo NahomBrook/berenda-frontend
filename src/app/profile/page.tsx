@@ -27,7 +27,7 @@ import {
   Eye,
   Languages
 } from "lucide-react";
-import { getProfile, updateProfile, uploadProfileImage, getUserBookings, getFavorites, getUserProperties, updateUserSettings, getSettings } from "../../utils/profileApi";
+import { getProfile, updateProfile, getUserBookings, getFavorites, getUserProperties, updateUserSettings, getSettings } from "../../utils/profileApi";
 import Navbar from "@/components/layout/Navbar";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -275,8 +275,7 @@ export default function ProfileDashboard() {
   const handleSave = async () => {
     if (!token) return;
     try {
-      await updateProfile(form, token);
-      if (imageFile) await uploadProfileImage(imageFile, token);
+      await updateProfile(form, token, imageFile || undefined);
 
       setMessage("Profile updated successfully!");
       setMessageType("success");
