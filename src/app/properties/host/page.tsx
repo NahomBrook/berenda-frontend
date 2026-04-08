@@ -103,6 +103,7 @@ export default function HostPropertyPage() {
   
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -319,35 +320,6 @@ export default function HostPropertyPage() {
     });
   };
 
-  // Add to wishlist function
-  const addToWishlist = async (propertyId: string) => {
-    try {
-      const token = localStorage.getItem("berenda_token");
-      if (!token) {
-        router.push("/auth/login");
-        return;
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/favorites`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ propertyId }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        console.log("Added to wishlist");
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Error adding to wishlist:", error);
-      return false;
-    }
-  };
 
   const handleSubmit = async () => {
     setError(null);
@@ -374,16 +346,8 @@ export default function HostPropertyPage() {
         await uploadPropertyImages(propertyId, imageFiles);
       }
 
-      // Ask user if they want to add to wishlist
-      const addToWishlistConfirm = window.confirm(
-        "Property listed successfully! Would you like to add it to your wishlist?"
-      );
-      
-      if (addToWishlistConfirm && propertyId) {
-        await addToWishlist(propertyId);
-      }
-
-      router.push(`/listings/${propertyId}`);
+      setSuccessMessage("Your property has been listed successfully! Redirecting...");
+      setTimeout(() => router.push(`/listings/${propertyId}`), 2500);
       
     } catch (err: any) {
       console.error("Error creating property:", err);
@@ -440,6 +404,16 @@ export default function HostPropertyPage() {
             />
           </div>
         </div>
+
+        {/* Success message */}
+        {successMessage && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 flex items-center gap-3">
+            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            {successMessage}
+          </div>
+        )}
 
         {/* Error message */}
         {error && (

@@ -34,15 +34,18 @@ export default function AdminPage() {
     const userStr = localStorage.getItem("berenda_user");
     
     if (!token) {
-      router.push("/auth/login");
+      router.push("/auth/login?redirect=/admin");
       return;
     }
     
     try {
       const user = JSON.parse(userStr || "{}");
-      // Prefer role-based check; fallback to email for older accounts
-      const role = typeof user.role === "string" ? user.role.toUpperCase() : (user.roles ? "ADMIN" : "");
-      if (role === "ADMIN" || role === "SUPERADMIN" || user.email === "admin@berenda.com") {
+      const isAdminUser =
+        user?.roles?.some((r: any) =>
+          ["ADMIN", "SUPER_ADMIN", "admin", "super_admin"].includes(r.name)
+        ) || user?.email === "admin@berenda.com";
+
+      if (isAdminUser) {
         setIsAdmin(true);
         fetchData();
       } else {
@@ -50,7 +53,7 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error("Error parsing user:", error);
-      router.push("/auth/login");
+      router.push("/auth/login?redirect=/admin");
     }
   }, [activeTab, pagination.page, search, filter]);
 

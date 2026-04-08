@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import Navbar from "../../../components/layout/Navbar";
 import { loginUser } from "../../../utils/api";
@@ -11,6 +11,7 @@ import { API_BASE_URL } from "@/utils/api";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,16 +21,16 @@ export default function LoginPage() {
 
   // Handle redirect based on user role
   const handleRedirect = useCallback((user: any) => {
+    const redirect = searchParams.get("redirect");
+    if (redirect) {
+      router.push(redirect);
+      return;
+    }
     const isAdmin = user?.roles?.some(
       (r: any) => r.name === "ADMIN" || r.name === "SUPER_ADMIN"
     );
-
-    if (isAdmin) {
-      router.push("/admin");
-    } else {
-      router.push("/");
-    }
-  }, [router]);
+    router.push(isAdmin ? "/admin" : "/");
+  }, [router, searchParams]);
 
   // Handle Google OAuth callback
   const handleGoogleCallback = useCallback(async (response: any) => {

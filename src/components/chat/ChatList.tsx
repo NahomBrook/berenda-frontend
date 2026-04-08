@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { MessageCircle, ChevronRight, Bot, Plus } from "lucide-react";
+import { MessageCircle, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { chatApi, ChatPreview } from "@/services/chatApi";
 
@@ -17,11 +17,9 @@ export default function ChatList({ onSelectChat, selectedChatId }: ChatListProps
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAIChat, setShowAIChat] = useState(false);
 
   useEffect(() => {
     fetchChats();
-    // Poll for new messages every 5 seconds
     const interval = setInterval(fetchChats, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -43,14 +41,6 @@ export default function ChatList({ onSelectChat, selectedChatId }: ChatListProps
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleAIChat = () => {
-    // Create a special AI chat (we'll use a flag to identify AI chats)
-    setShowAIChat(true);
-    // Create a temporary AI chat ID
-    const aiChatId = 'ai-assistant';
-    onSelectChat(aiChatId);
   };
 
   if (loading) {
@@ -75,10 +65,7 @@ export default function ChatList({ onSelectChat, selectedChatId }: ChatListProps
     return (
       <div className="text-center py-8">
         <p className="text-red-500 mb-2">{error}</p>
-        <button
-          onClick={fetchChats}
-          className="text-sm text-red-600 hover:text-red-700"
-        >
+        <button onClick={fetchChats} className="text-sm text-red-600 hover:text-red-700">
           Try again
         </button>
       </div>
@@ -87,24 +74,6 @@ export default function ChatList({ onSelectChat, selectedChatId }: ChatListProps
 
   return (
     <div className="h-full flex flex-col">
-      {/* AI Assistant Button */}
-      <div className="p-4 border-b border-gray-100">
-        <button
-          onClick={handleAIChat}
-          className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl hover:from-purple-100 hover:to-pink-100 transition-all duration-200 border border-purple-200"
-        >
-          <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center shadow-md">
-            <Bot className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex-1 text-left">
-            <h3 className="font-semibold text-gray-900">AI Assistant</h3>
-            <p className="text-xs text-gray-500">Ask me anything about Berenda</p>
-          </div>
-          <ChevronRight className="w-5 h-5 text-purple-400" />
-        </button>
-      </div>
-
-      {/* Chat List */}
       <div className="flex-1 overflow-y-auto">
         {chats.length === 0 ? (
           <div className="text-center py-12 px-4">
@@ -129,10 +98,9 @@ export default function ChatList({ onSelectChat, selectedChatId }: ChatListProps
                 key={chat.id}
                 onClick={() => onSelectChat(chat.id)}
                 className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-50 transition ${
-                  selectedChatId === chat.id ? 'bg-red-50' : ''
+                  selectedChatId === chat.id ? "bg-red-50" : ""
                 }`}
               >
-                {/* Avatar */}
                 <div className="relative">
                   <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
                     <span className="text-red-600 font-medium">
@@ -146,32 +114,27 @@ export default function ChatList({ onSelectChat, selectedChatId }: ChatListProps
                   )}
                 </div>
 
-                {/* Chat info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
-                    <h4 className="font-medium text-gray-900 truncate">
-                      {chat.participant.fullName}
-                    </h4>
+                    <h4 className="font-medium text-gray-900 truncate">{chat.participant.fullName}</h4>
                     {chat.lastMessage && (
                       <span className="text-xs text-gray-500">
                         {formatDistanceToNow(new Date(chat.lastMessage.createdAt), { addSuffix: true })}
                       </span>
                     )}
                   </div>
-                  
+
                   {chat.propertyTitle && (
-                    <p className="text-xs text-gray-500 mb-1">
-                      Regarding: {chat.propertyTitle}
-                    </p>
+                    <p className="text-xs text-gray-500 mb-1">Regarding: {chat.propertyTitle}</p>
                   )}
-                  
+
                   {chat.lastMessage ? (
                     <p className={`text-sm truncate ${
                       chat.unreadCount > 0 && !chat.lastMessage.isFromMe
-                        ? 'font-medium text-gray-900'
-                        : 'text-gray-600'
+                        ? "font-medium text-gray-900"
+                        : "text-gray-600"
                     }`}>
-                      {chat.lastMessage.isFromMe ? 'You: ' : ''}
+                      {chat.lastMessage.isFromMe ? "You: " : ""}
                       {chat.lastMessage.content}
                     </p>
                   ) : (

@@ -283,7 +283,10 @@ export default function ProfileDashboard() {
       setEditing(false);
 
       const refreshed = await getProfile(token);
-      if (refreshed.success) setUser(refreshed.data);
+      if (refreshed.success) {
+        setUser(refreshed.data);
+        localStorage.setItem("berenda_user", JSON.stringify(refreshed.data));
+      }
       
       setTimeout(() => setMessage(""), 3000);
     } catch (err: any) {
