@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import SearchBar from "@/components/home/SearchBar";
-import { api } from "@/services/api";
+import { propertyAPI } from "@/services/api";
 import type { Property } from "@/types/property";
 
 export default function Home() {
@@ -31,7 +31,18 @@ export default function Home() {
   const fetchProperties = useCallback(async (filters?: any) => {
     try {
       setLoading(true);
-      const data = await api.getProperties(filters || currentFilters);
+      const f = filters || currentFilters;
+      const params: Record<string, string | number> = {};
+      if (f.location) params.location = f.location;
+      if (f.checkIn) params.checkIn = f.checkIn.toISOString();
+      if (f.checkOut) params.checkOut = f.checkOut.toISOString();
+      if (f.homeType?.length) params.homeType = f.homeType.join(',');
+      if (f.amenities?.length) params.amenities = f.amenities.join(',');
+      if (f.minPrice) params.minPrice = f.minPrice;
+      if (f.maxPrice && f.maxPrice < 5000) params.maxPrice = f.maxPrice;
+      if (f.bedrooms) params.bedrooms = f.bedrooms;
+      const response = await propertyAPI.list(params);
+      const data = response.data?.properties || response.data || [];
       setProperties(data);
       setError(null);
     } catch (err) {
