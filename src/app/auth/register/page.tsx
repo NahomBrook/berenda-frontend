@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
-import Navbar from "../../../components/layout/NavBar";
+import Navbar from "../../../components/layout/Navbar";
 import { registerUser } from "../../../utils/api";
 import { API_BASE_URL } from "@/utils/api";
 import { useLanguage } from "@/context/LanguageContext";
@@ -23,11 +23,10 @@ export default function RegisterPage() {
 
   // Handle redirect after successful registration/login
   const handleRedirect = useCallback((user: any) => {
-    console.log("Redirecting user:", user);
     const isAdmin = user?.roles?.some(
       (r: any) => r.name === "ADMIN" || r.name === "SUPER_ADMIN"
     );
-    
+
     if (isAdmin) {
       router.push("/admin");
     } else {
@@ -42,7 +41,7 @@ export default function RegisterPage() {
       setError("Google authentication failed");
       return;
     }
-    
+
     setLoading(true);
     setError("");
     try {
@@ -51,17 +50,16 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
       });
-      
+
       const result = await res.json();
-      console.log("Google auth response:", result);
-      
+
       if (!res.ok) {
         throw new Error(result.message || "Google authentication failed");
       }
-      
+
       if (result.status === 200 && result.data) {
-        localStorage.setItem("token", result.data.token);
-        localStorage.setItem("user", JSON.stringify(result.data.user));
+        localStorage.setItem("berenda_token", result.data.token);
+        localStorage.setItem("berenda_user", JSON.stringify(result.data.user));
         handleRedirect(result.data.user);
       }
     } catch (err: any) {
@@ -77,15 +75,13 @@ export default function RegisterPage() {
     const google = (window as any).google;
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-    console.log("Initializing Google with clientId:", clientId);
-    
     if (google && google.accounts && google.accounts.id && clientId) {
       google.accounts.id.initialize({
         client_id: clientId,
         callback: handleGoogleCallback,
         auto_select: false,
       });
-      
+
       const buttonElement = document.getElementById("google-signin-button");
       if (buttonElement) {
         google.accounts.id.renderButton(buttonElement, {
@@ -95,11 +91,7 @@ export default function RegisterPage() {
           shape: "rectangular",
         });
         setGoogleLoaded(true);
-      } else {
-        console.log("Google button element not found");
       }
-    } else {
-      console.log("Google not available yet, clientId:", clientId);
     }
   }, [handleGoogleCallback]);
 
@@ -108,7 +100,6 @@ export default function RegisterPage() {
     const timer = setTimeout(() => {
       const google = (window as any).google;
       if (google && !googleLoaded) {
-        console.log("Fallback initializing Google");
         initializeGoogle();
       }
     }, 1000);
@@ -122,16 +113,15 @@ export default function RegisterPage() {
       setError(t("auth.register.termsMissing") || "You must agree to terms and conditions.");
       return;
     }
-    
+
     setLoading(true);
     setError("");
     setSuccess("");
-    
+
     try {
       // registerUser now returns user object and stores token
       const user = await registerUser(fullName, email, password);
-      console.log("Registration successful, user:", user);
-      
+
       if (user) {
         handleRedirect(user);
       } else {
@@ -151,22 +141,22 @@ export default function RegisterPage() {
         src="https://accounts.google.com/gsi/client"
         strategy="afterInteractive"
         onLoad={initializeGoogle}
-        onError={() => console.log("Google script failed to load")}
+        onError={() => console.error("Google script failed to load")}
       />
-      
+
       <Navbar />
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
         <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow-md w-96">
           <h2 className="text-3xl font-bold mb-6 text-center">
             {t("auth.register.title") || "Create an Account"}
           </h2>
-          
+
           {error && (
             <p className="text-red-500 mb-4 text-sm bg-red-50 p-2 rounded border border-red-100">
               {error}
             </p>
           )}
-          
+
           {success && (
             <p className="text-green-500 mb-4 text-sm bg-green-50 p-2 rounded border border-green-100">
               {success}
@@ -182,7 +172,7 @@ export default function RegisterPage() {
             required
             disabled={loading}
           />
-          
+
           <input
             type="email"
             placeholder={t("auth.register.email") || "Email"}
@@ -192,7 +182,7 @@ export default function RegisterPage() {
             required
             disabled={loading}
           />
-          
+
           <input
             type="password"
             placeholder={t("auth.register.password") || "Password"}
@@ -228,7 +218,7 @@ export default function RegisterPage() {
               <span className="flex-shrink mx-4 text-gray-400 text-sm font-medium">OR</span>
               <div className="flex-grow border-t border-gray-300"></div>
             </div>
-            
+
             <div id="google-signin-button" className="w-full flex justify-center mt-2"></div>
           </div>
 

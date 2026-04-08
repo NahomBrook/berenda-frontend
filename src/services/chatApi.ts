@@ -30,7 +30,7 @@ class ChatApiService {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const token = localStorage.getItem('token');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('berenda_token') : null;
     const url = `${API_BASE_URL}${endpoint}`;
     
     const response = await fetch(url, {

@@ -3,7 +3,7 @@
 import { useState, ChangeEvent, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import Navbar from "@/components/layout/NavBar";
+import Navbar from "@/components/layout/Navbar";
 import { createProperty, uploadPropertyImages } from "@/utils/api";
 import DragDropImageUpload from "@/components/DragDropImageUpload";
 

@@ -10,7 +10,7 @@ import {
   deleteProperty,
   uploadPropertyImages,
 } from "../../../utils/api";
-import Navbar from "@/components/layout/NavBar";
+import Navbar from "@/components/layout/Navbar";
 import { MessageCircle, Bed, Bath, Users, Maximize2, Calendar, Home, Wifi, Coffee, Car, Tv, Dumbbell, Waves, Wind, Utensils, ParkingCircle, Dog, Sparkles } from "lucide-react";
 import { DateRangePicker } from "@/components/DateRangePicker";
 

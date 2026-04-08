@@ -1,126 +1,202 @@
-// frontend/src/services/api.ts
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import axios from 'axios';
 
-class ApiService {
-  private async fetch<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
-    console.log('🌐 Fetching:', url);
-    
-    try {
-      const response = await fetch(url, {
-        ...options,
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-      });
+// Primary backend is on Render; Vercel URL is the legacy/fallback
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://berenda-backend-ow7d.onrender.com/api';
 
-      const data = await response.json();
-      console.log('📦 Raw response:', data);
+const api = axios.create({
+  baseURL: BASE_URL,
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 20000, // Render free-tier may cold-start; give 20 s
+});
 
-      if (!response.ok) {
-        throw new Error(data.message || `API request failed with status ${response.status}`);
-      }
+// Attach auth token to every request
+api.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('berenda_token');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-      return data;
-    } catch (error) {
-      console.error('❌ API request failed:', error);
-      throw error;
+// Handle 401 globally (expired / invalid token)
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('berenda_token');
+      localStorage.removeItem('berenda_user');
+      window.location.href = '/login';
     }
+    return Promise.reject(error);
   }
+);
 
-  async getProperties(filters?: {
-    location?: string;
-    minPrice?: number;
-    maxPrice?: number;
-    checkIn?: string;
-    checkOut?: string;
-    homeType?: string[];
-    amenities?: string[];
-    bedrooms?: number;
-  }) {
-    try {
-      // Build query params
-      const params = new URLSearchParams();
-      if (filters?.location) params.append('location', filters.location);
-      if (filters?.minPrice) params.append('minPrice', filters.minPrice.toString());
-      if (filters?.maxPrice) params.append('maxPrice', filters.maxPrice.toString());
-      if (filters?.checkIn) params.append('checkIn', filters.checkIn);
-      if (filters?.checkOut) params.append('checkOut', filters.checkOut);
-      if (filters?.bedrooms && filters.bedrooms > 0) params.append('bedrooms', filters.bedrooms.toString());
-      if (filters?.homeType?.length) params.append('homeType', filters.homeType.join(','));
-      if (filters?.amenities?.length) params.append('amenities', filters.amenities.join(','));
+// ── Auth ──────────────────────────────────────────────────────────────────────
 
-      const queryString = params.toString();
-      const endpoint = `/properties${queryString ? `?${queryString}` : ''}`;
-      
-      const response = await this.fetch<any>(endpoint);
-      
-      // Handle your backend's response structure
-      if (response.success && Array.isArray(response.data)) {
-        console.log(`✅ Successfully fetched ${response.count} properties`);
-        return response.data;
-      } else if (Array.isArray(response)) {
-        return response;
-      } else if (response.data && Array.isArray(response.data)) {
-        return response.data;
-      } else {
-        console.warn('⚠️ Unexpected API response format:', response);
-        return [];
-      }
-    } catch (error) {
-      console.error('❌ Error in getProperties:', error);
-      throw error;
-    }
-  }
+export const authAPI = {
+  register: (data: { email: string; password: string; fullName: string }) =>
+    api.post('/auth/register', data),
 
-  async searchLocations(query: string) {
-    try {
-      const response = await this.fetch<any>(`/locations/search?q=${encodeURIComponent(query)}`);
-      if (response.success && Array.isArray(response.data)) {
-        return response.data;
-      }
-      return [];
-    } catch (error) {
-      console.error('Error searching locations:', error);
-      return [];
-    }
-  }
+  login: (data: { email: string; password: string }) =>
+    api.post('/auth/login', data),
 
-  async getProperty(id: string) {
-    const response = await this.fetch<any>(`/properties/${id}`);
-    if (response.success && response.data) {
-      return response.data;
-    }
-    return response;
-  }
+  googleLogin: (idToken: string) =>
+    api.post('/auth/google', { idToken }),
+};
 
-  async createProperty(propertyData: any) {
-    const response = await this.fetch<any>('/properties', {
-      method: 'POST',
-      body: JSON.stringify(propertyData),
-    });
-    return response.data;
-  }
+// ── User / Profile ────────────────────────────────────────────────────────────
 
-  async updateProperty(id: string, propertyData: any) {
-    const response = await this.fetch<any>(`/properties/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(propertyData),
-    });
-    return response.data;
-  }
+export const userAPI = {
+  getProfile: () => api.get('/users/profile'),
 
-  async deleteProperty(id: string) {
-    const response = await this.fetch<any>(`/properties/${id}`, {
-      method: 'DELETE',
-    });
-    return response;
-  }
-}
+  updateProfile: (data: FormData) =>
+    api.put('/users/profile', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 
-export const api = new ApiService();
+  getSettings: () => api.get('/users/settings'),
+
+  updateSettings: (settings: Record<string, unknown>) =>
+    api.put('/users/settings', settings),
+};
+
+// ── Properties ────────────────────────────────────────────────────────────────
+
+export const propertyAPI = {
+  list: (params?: Record<string, string | number>) =>
+    api.get('/properties', { params }),
+
+  search: (params: Record<string, string | number>) =>
+    api.get('/properties/search', { params }),
+
+  getById: (id: string) => api.get(`/properties/${id}`),
+
+  getMyProperties: () => api.get('/properties/user/properties'),
+
+  create: (data: Record<string, unknown>) =>
+    api.post('/properties', data),
+
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/properties/${id}`, data),
+
+  delete: (id: string) => api.delete(`/properties/${id}`),
+
+  uploadImages: (propertyId: string, files: FormData) =>
+    api.post(`/properties/${propertyId}/images`, files, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  checkAvailability: (
+    propertyId: string,
+    data: { checkIn: string; checkOut: string; guests: number }
+  ) => api.post(`/properties/${propertyId}/check-availability`, data),
+};
+
+// ── Bookings ──────────────────────────────────────────────────────────────────
+
+export const bookingAPI = {
+  getMyBookings: () => api.get('/bookings'),
+
+  getHostBookings: () => api.get('/bookings/host'),
+
+  getById: (id: string) => api.get(`/bookings/${id}`),
+
+  create: (data: {
+    propertyId: string;
+    checkIn: string;
+    checkOut: string;
+    guests: number;
+    totalPrice?: number;
+  }) => api.post('/bookings', data),
+
+  cancel: (id: string) => api.patch(`/bookings/${id}/cancel`),
+
+  updateStatus: (id: string, status: string) =>
+    api.patch(`/bookings/${id}/status`, { status }),
+};
+
+// ── Payments ──────────────────────────────────────────────────────────────────
+
+export const paymentAPI = {
+  initialize: (data: Record<string, unknown>) =>
+    api.post('/payments/initialize', data),
+
+  verify: (txRef: string) => api.get(`/payments/verify/${txRef}`),
+};
+
+// ── Favorites ────────────────────────────────────────────────────────────────
+
+export const favoritesAPI = {
+  list: () => api.get('/favorites'),
+
+  add: (propertyId: string) => api.post('/favorites', { propertyId }),
+
+  remove: (propertyId: string) => api.delete(`/favorites/${propertyId}`),
+};
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+
+export const chatAPI = {
+  getChats: () => api.get('/chats'),
+
+  createChat: (participantId: string) =>
+    api.post('/chats', { participantId }),
+
+  getChatById: (chatId: string) => api.get(`/chats/${chatId}`),
+
+  getMessages: (chatId: string) => api.get(`/chats/${chatId}/messages`),
+
+  sendMessage: (chatId: string, message: string) =>
+    api.post(`/chats/${chatId}/messages`, { message }),
+
+  getUnreadCount: () => api.get('/chats/unread'),
+};
+
+// ── AI ────────────────────────────────────────────────────────────────────────
+
+export const aiAPI = {
+  sendMessage: (message: string, conversationId?: string) =>
+    api.post('/ai/chat', { message, conversationId }),
+
+  clearHistory: () => api.delete('/ai/chat/history'),
+};
+
+// ── Admin ────────────────────────────────────────────────────────────────────
+
+export const adminAPI = {
+  getDashboard: () => api.get('/admin/dashboard'),
+
+  getUsers: (params?: { page?: number; limit?: number; search?: string }) =>
+    api.get('/admin/users', { params }),
+
+  getUserById: (userId: string) => api.get(`/admin/users/${userId}`),
+
+  updateUserRole: (userId: string, roleName: string) =>
+    api.patch(`/admin/users/${userId}/role`, { roleName }),
+
+  deleteUser: (userId: string) => api.delete(`/admin/users/${userId}`),
+
+  getProperties: (params?: { page?: number; limit?: number; status?: string }) =>
+    api.get('/admin/properties', { params }),
+
+  approveProperty: (propertyId: string) =>
+    api.patch(`/admin/properties/${propertyId}/approve`),
+
+  rejectProperty: (propertyId: string, reason?: string) =>
+    api.patch(`/admin/properties/${propertyId}/reject`, { reason }),
+
+  deleteProperty: (propertyId: string) =>
+    api.delete(`/admin/properties/${propertyId}`),
+
+  getBookings: (params?: { page?: number; limit?: number; status?: string }) =>
+    api.get('/admin/bookings', { params }),
+
+  updateBookingStatus: (bookingId: string, status: string) =>
+    api.patch(`/admin/bookings/${bookingId}/status`, { status }),
+
+  getActions: () => api.get('/admin/actions'),
+};
+
+export default api;

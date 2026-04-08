@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
-import Navbar from "../../../components/layout/NavBar";
+import Navbar from "../../../components/layout/Navbar";
 import { loginUser } from "../../../utils/api";
 import { useLanguage } from "@/context/LanguageContext";
 import { API_BASE_URL } from "@/utils/api";
@@ -20,12 +20,10 @@ export default function LoginPage() {
 
   // Handle redirect based on user role
   const handleRedirect = useCallback((user: any) => {
-    console.log("User from login:", user);
-    
     const isAdmin = user?.roles?.some(
       (r: any) => r.name === "ADMIN" || r.name === "SUPER_ADMIN"
     );
-    
+
     if (isAdmin) {
       router.push("/admin");
     } else {
@@ -35,35 +33,30 @@ export default function LoginPage() {
 
   // Handle Google OAuth callback
   const handleGoogleCallback = useCallback(async (response: any) => {
-    console.log("🔑 Google callback received:", response);
-    
     const idToken = response?.credential;
     if (!idToken) {
       console.error("❌ No credential in Google response");
       setError("Google authentication failed");
       return;
     }
-    
-    console.log("✅ ID Token received (first 20 chars):", idToken.substring(0, 20));
+
     setLoading(true);
     setError("");
-    
+
     try {
-      console.log("📡 Sending token to backend:", `${API_BASE_URL}/auth/google`);
       const res = await fetch(`${API_BASE_URL}/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
       });
-      
+
       const result = await res.json();
-      console.log("Google login response:", result);
-      
+
       if (!res.ok) throw new Error(result.message || "Google login failed");
-      
+
       if (result.status === 200 && result.data) {
-        localStorage.setItem("token", result.data.token);
-        localStorage.setItem("user", JSON.stringify(result.data.user));
+        localStorage.setItem("berenda_token", result.data.token);
+        localStorage.setItem("berenda_user", JSON.stringify(result.data.user));
         handleRedirect(result.data.user);
       }
     } catch (err: any) {
@@ -78,21 +71,16 @@ export default function LoginPage() {
   const initializeGoogle = useCallback(() => {
     const google = (window as any).google;
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    
-    console.log("🔧 Initializing Google...");
-    console.log("Google object exists:", !!google);
-    console.log("Client ID:", clientId);
-    
+
     if (google && google.accounts && google.accounts.id && clientId) {
       google.accounts.id.initialize({
         client_id: clientId,
         callback: handleGoogleCallback,
         auto_select: false,
       });
-      
+
       const buttonElement = document.getElementById("g_id_signin");
-      console.log("Button element found:", !!buttonElement);
-      
+
       if (buttonElement) {
         google.accounts.id.renderButton(buttonElement, {
           theme: "outline",
@@ -101,14 +89,7 @@ export default function LoginPage() {
           shape: "rectangular",
         });
         setGoogleInitialized(true);
-        console.log("✅ Google button rendered");
-      } else {
-        console.error("❌ Button element 'g_id_signin' not found");
       }
-    } else {
-      console.error("❌ Google or clientId missing");
-      if (!google) console.error("  - google object missing");
-      if (!clientId) console.error("  - clientId missing");
     }
   }, [handleGoogleCallback]);
 
@@ -118,7 +99,6 @@ export default function LoginPage() {
       const timer = setTimeout(() => {
         const google = (window as any).google;
         if (google && !googleInitialized) {
-          console.log("🔄 Fallback: Initializing Google");
           initializeGoogle();
         }
       }, 1000);
@@ -129,7 +109,7 @@ export default function LoginPage() {
   // Handle email/password login
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate inputs
     if (!email.trim()) {
       setError("Email is required");
@@ -139,14 +119,13 @@ export default function LoginPage() {
       setError("Password is required");
       return;
     }
-    
+
     setError("");
     setLoading(true);
-    
+
     try {
       const user = await loginUser(email, password);
-      console.log("Login successful, user:", user);
-      
+
       if (user) {
         handleRedirect(user);
       } else {
@@ -166,7 +145,6 @@ export default function LoginPage() {
         src="https://accounts.google.com/gsi/client"
         strategy="afterInteractive"
         onLoad={() => {
-          console.log("📚 Google script loaded");
           initializeGoogle();
         }}
         onError={() => console.error("❌ Google script failed to load")}
@@ -176,7 +154,7 @@ export default function LoginPage() {
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
         <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow-md w-96">
           <h2 className="text-3xl font-bold mb-6 text-center">{t("auth.login.title")}</h2>
-          
+
           {error && (
             <p className="text-red-500 mb-4 text-sm bg-red-50 p-2 rounded border border-red-100">
               {error}

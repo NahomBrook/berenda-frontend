@@ -28,7 +28,7 @@ import {
   Languages
 } from "lucide-react";
 import { getProfile, updateProfile, uploadProfileImage, getUserBookings, getFavorites, getUserProperties, updateUserSettings, getSettings } from "../../utils/profileApi";
-import Navbar from "@/components/layout/NavBar";
+import Navbar from "@/components/layout/Navbar";
 import { useLanguage } from "@/context/LanguageContext";
 
 interface Tab {

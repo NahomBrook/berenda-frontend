@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin } from "lucide-react";
-import Navbar from "@/components/layout/NavBar";
+import Navbar from "@/components/layout/Navbar";
 import SearchBar from "@/components/home/SearchBar";
 import { api } from "@/services/api";
 import type { Property } from "@/types/property";

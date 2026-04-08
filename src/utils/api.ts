@@ -1,8 +1,6 @@
 // src/utils/api.ts
 
-// HARDCODED for production - Remove after Vercel env vars work
-export const API_BASE_URL = "https://berenda-backend-ow7d.onrender.com/api";
-// export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 // Helper to extract data from response
 function extractData(response: any) {
@@ -51,10 +49,10 @@ export async function registerUser(fullName: string, email: string, password: st
     const result = extractData(loginData);
     
     if (result.token) {
-      localStorage.setItem("token", result.token);
+      localStorage.setItem("berenda_token", result.token);
     }
     if (result.user) {
-      localStorage.setItem("user", JSON.stringify(result.user));
+      localStorage.setItem("berenda_user", JSON.stringify(result.user));
       return result.user;
     }
     
@@ -91,12 +89,12 @@ export async function loginUser(email: string, password: string) {
       throw new Error("No token received from server");
     }
     
-    localStorage.setItem("token", result.token);
+    localStorage.setItem("berenda_token", result.token);
     if (result.user) {
-      localStorage.setItem("user", JSON.stringify(result.user));
+      localStorage.setItem("berenda_user", JSON.stringify(result.user));
       return result.user;
     }
-    
+
     throw new Error("Invalid response format from server");
   } catch (error: any) {
     console.error("Login error:", error);
@@ -121,7 +119,7 @@ export async function getPropertyById(id: string) {
 }
 
 export async function createProperty(propertyData: any) {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("berenda_token");
   if (!token) throw new Error("Not authenticated");
 
   const res = await fetch(`${API_BASE_URL}/properties`, {
@@ -139,7 +137,7 @@ export async function createProperty(propertyData: any) {
 }
 
 export async function updateProperty(id: string, updateData: any) {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("berenda_token");
   if (!token) throw new Error("Not authenticated");
 
   const res = await fetch(`${API_BASE_URL}/properties/${id}`, {
@@ -157,7 +155,7 @@ export async function updateProperty(id: string, updateData: any) {
 }
 
 export async function deleteProperty(id: string) {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("berenda_token");
   if (!token) throw new Error("Not authenticated");
 
   const res = await fetch(`${API_BASE_URL}/properties/${id}`, {
@@ -173,7 +171,7 @@ export async function deleteProperty(id: string) {
 // -------------------- BOOKINGS --------------------
 
 export async function createBooking(propertyId: string, checkIn: string, checkOut: string) {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("berenda_token");
   if (!token) throw new Error("Not authenticated");
 
   const res = await fetch(`${API_BASE_URL}/bookings`, {
@@ -193,7 +191,7 @@ export async function createBooking(propertyId: string, checkIn: string, checkOu
 // -------------------- UPLOAD IMAGES --------------------
 
 export async function uploadPropertyImages(propertyId: string, files: File[]) {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("berenda_token");
   if (!token) throw new Error("Not authenticated");
 
   const formData = new FormData();
@@ -233,7 +231,7 @@ export async function checkPropertyEligibility(
   propertyId: string, 
   data: EligibilityCheckData
 ): Promise<EligibilityResult> {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("berenda_token");
   
   const headers: HeadersInit = {
     "Content-Type": "application/json",

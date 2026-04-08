@@ -5,6 +5,6 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://your-backend-url.vercel.app/api"
+    "NEXT_PUBLIC_API_URL": "https://berenda-backend-ow7d.onrender.com/api"
   }
 }

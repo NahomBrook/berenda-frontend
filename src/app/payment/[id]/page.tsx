@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Navbar from "@/components/layout/NavBar";
+import Navbar from "@/components/layout/Navbar";
 import { API_BASE_URL } from "@/utils/api";
 import { CreditCard, Landmark, Loader2, Phone, Banknote, FileText } from "lucide-react";
 

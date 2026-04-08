@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import Navbar from "@/components/layout/NavBar";
+import Navbar from "@/components/layout/Navbar";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 export default function PaymentVerifyPage() {

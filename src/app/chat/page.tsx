@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Navbar from "@/components/layout/NavBar";
+import Navbar from "@/components/layout/Navbar";
 import ChatList from "@/components/chat/ChatList";
 import ChatRoom from "@/components/chat/ChatRoom";
 
