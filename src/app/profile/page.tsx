@@ -2,16 +2,16 @@
 
 import { useEffect, useState, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Calendar, 
-  Heart, 
-  Settings, 
-  Edit2, 
-  Save, 
-  X, 
+import {
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  Heart,
+  Settings,
+  Edit2,
+  Save,
+  X,
   LogOut,
   ChevronRight,
   Star,
@@ -20,12 +20,8 @@ import {
   CheckCircle,
   XCircle,
   Building2,
-  AlertCircle,
   Globe,
-  Bell,
   Lock,
-  Eye,
-  Languages
 } from "lucide-react";
 import { getProfile, updateProfile, getUserBookings, getFavorites, getUserProperties, updateUserSettings, getSettings } from "../../utils/profileApi";
 import Navbar from "@/components/layout/Navbar";
@@ -84,7 +80,7 @@ interface UserSettings {
 
 export default function ProfileDashboard() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, setLanguage, language } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ fullName: "", email: "", phone: "" });
@@ -115,11 +111,11 @@ export default function ProfileDashboard() {
   const [savingSettings, setSavingSettings] = useState(false);
 
   const tabs: Tab[] = [
-    { name: "Profile", key: "profile", icon: <User className="w-5 h-5" /> },
-    { name: "Bookings", key: "bookings", icon: <Calendar className="w-5 h-5" /> },
-    { name: "Wishlist", key: "wishlist", icon: <Heart className="w-5 h-5" /> },
-    { name: "Hosting", key: "hosting", icon: <Home className="w-5 h-5" /> },
-    { name: "Settings", key: "settings", icon: <Settings className="w-5 h-5" /> },
+    { name: t("profile.tab.profile"), key: "profile", icon: <User className="w-5 h-5" /> },
+    { name: t("profile.tab.bookings"), key: "bookings", icon: <Calendar className="w-5 h-5" /> },
+    { name: t("profile.tab.wishlist"), key: "wishlist", icon: <Heart className="w-5 h-5" /> },
+    { name: t("profile.tab.hosting"), key: "hosting", icon: <Home className="w-5 h-5" /> },
+    { name: t("profile.tab.settings"), key: "settings", icon: <Settings className="w-5 h-5" /> },
   ];
 
   useEffect(() => {
@@ -498,7 +494,7 @@ export default function ProfileDashboard() {
                   className="w-full flex items-center gap-3 px-4 py-3 mt-4 text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200"
                 >
                   <LogOut className="w-5 h-5" />
-                  <span>Logout</span>
+                  <span>{t("profile.logout")}</span>
                 </button>
               </nav>
             </div>
@@ -511,8 +507,8 @@ export default function ProfileDashboard() {
                 <div className="p-6 border-b border-gray-100">
                   <div className="flex justify-between items-center">
                     <div>
-                        <h2 className="text-2xl font-semibold text-gray-900">Profile Information</h2>
-                        <p className="text-gray-600 mt-1">Manage your personal information</p>
+                        <h2 className="text-2xl font-semibold text-gray-900">{t("profile.info.title")}</h2>
+                        <p className="text-gray-600 mt-1">{t("profile.info.subtitle")}</p>
                     </div>
                     {!editing && (
                       <button
@@ -520,7 +516,7 @@ export default function ProfileDashboard() {
                         className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
                       >
                           <Edit2 className="w-4 h-4" />
-                          Edit Profile
+                          {t("profile.editProfile")}
                       </button>
                     )}
                   </div>
@@ -531,7 +527,7 @@ export default function ProfileDashboard() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         <User className="w-4 h-4 inline mr-1" />
-                        Full Name
+                        {t("profile.field.fullName")}
                       </label>
                       <input
                         type="text"
@@ -550,7 +546,7 @@ export default function ProfileDashboard() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         <Mail className="w-4 h-4 inline mr-1" />
-                        Email Address
+                        {t("profile.field.email")}
                       </label>
                       <input
                         type="email"
@@ -569,7 +565,7 @@ export default function ProfileDashboard() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         <Phone className="w-4 h-4 inline mr-1" />
-                        Phone Number
+                        {t("profile.field.phone")}
                       </label>
                       <input
                         type="tel"
@@ -577,7 +573,7 @@ export default function ProfileDashboard() {
                         value={form.phone}
                         onChange={handleChange}
                         disabled={!editing}
-                        placeholder="Add your phone number"
+                        placeholder={t("profile.field.phonePlaceholder")}
                         className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 transition ${
                           editing 
                             ? "border-gray-300 focus:border-red-500" 
@@ -589,7 +585,7 @@ export default function ProfileDashboard() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         <Calendar className="w-4 h-4 inline mr-1" />
-                        Member Since
+                        {t("profile.field.memberSince")}
                       </label>
                       <input
                         type="text"
@@ -611,7 +607,7 @@ export default function ProfileDashboard() {
                         className="flex items-center gap-2 px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition shadow-md hover:shadow-lg"
                       >
                         <Save className="w-4 h-4" />
-                        Save Changes
+                        {t("profile.saveChanges")}
                       </button>
                       <button
                         onClick={() => {
@@ -627,7 +623,7 @@ export default function ProfileDashboard() {
                         className="flex items-center gap-2 px-6 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-xl transition"
                       >
                         <X className="w-4 h-4" />
-                        Cancel
+                        {t("profile.cancel")}
                       </button>
                     </div>
                   )}
@@ -638,20 +634,20 @@ export default function ProfileDashboard() {
             {activeTab.key === "bookings" && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
-                  <h2 className="text-2xl font-semibold text-gray-900">My Bookings</h2>
-                  <p className="text-gray-600 mt-1">View and manage your booking history</p>
+                  <h2 className="text-2xl font-semibold text-gray-900">{t("profile.bookings.title")}</h2>
+                  <p className="text-gray-600 mt-1">{t("profile.bookings.subtitle")}</p>
                 </div>
 
                 <div className="p-6">
                   {bookings.length === 0 ? (
                     <div className="text-center py-12">
                       <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">No bookings yet</p>
-                      <button 
+                      <p className="text-gray-500">{t("profile.bookings.empty")}</p>
+                      <button
                         onClick={() => router.push("/")}
                         className="mt-4 text-red-500 hover:text-red-600 font-medium"
                       >
-                        Start Exploring Properties →
+                        {t("profile.startExploring")}
                       </button>
                     </div>
                   ) : (
@@ -704,20 +700,20 @@ export default function ProfileDashboard() {
             {activeTab.key === "wishlist" && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
-                  <h2 className="text-2xl font-semibold text-gray-900">My Wishlist</h2>
-                  <p className="text-gray-600 mt-1">Properties you've saved for later</p>
+                  <h2 className="text-2xl font-semibold text-gray-900">{t("profile.wishlist.title")}</h2>
+                  <p className="text-gray-600 mt-1">{t("profile.wishlist.subtitle")}</p>
                 </div>
 
                 <div className="p-6">
                   {wishlist.length === 0 ? (
                     <div className="text-center py-12">
                       <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">Your wishlist is empty</p>
-                      <button 
+                      <p className="text-gray-500">{t("profile.wishlist.empty")}</p>
+                      <button
                         onClick={() => router.push("/")}
                         className="mt-4 text-red-500 hover:text-red-600 font-medium"
                       >
-                        Browse Properties →
+                        {t("profile.wishlist.browse")}
                       </button>
                     </div>
                   ) : (
@@ -739,7 +735,7 @@ export default function ProfileDashboard() {
                             <h3 className="font-semibold text-gray-900">{item.title}</h3>
                             <p className="text-gray-600 text-sm mt-1">{item.location}</p>
                             <div className="flex justify-between items-center mt-3">
-                              <p className="text-red-500 font-semibold">${item.price}<span className="text-gray-500 text-sm">/month</span></p>
+                              <p className="text-red-500 font-semibold">${item.price}<span className="text-gray-500 text-sm">{t("profile.wishlist.perMonth")}</span></p>
                               <div className="flex items-center gap-1 text-sm text-gray-600">
                                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                                 {item.rating}
@@ -759,15 +755,15 @@ export default function ProfileDashboard() {
                 <div className="p-6 border-b border-gray-100">
                   <div className="flex justify-between items-center">
                     <div>
-                      <h2 className="text-2xl font-semibold text-gray-900">Hosted Properties</h2>
-                      <p className="text-gray-600 mt-1">Manage properties you're hosting</p>
+                      <h2 className="text-2xl font-semibold text-gray-900">{t("profile.hosting.title")}</h2>
+                      <p className="text-gray-600 mt-1">{t("profile.hosting.subtitle")}</p>
                     </div>
                     <button
                       onClick={() => router.push("/properties/host")}
                       className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition shadow-md"
                     >
                       <Building2 className="w-4 h-4" />
-                      Add New Property
+                      {t("profile.hosting.addNew")}
                     </button>
                   </div>
                 </div>
@@ -776,12 +772,12 @@ export default function ProfileDashboard() {
                   {hostedProperties.length === 0 ? (
                     <div className="text-center py-12">
                       <Home className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">You haven't listed any properties yet</p>
-                      <button 
+                      <p className="text-gray-500">{t("profile.hosting.empty")}</p>
+                      <button
                         onClick={() => router.push("/properties/host")}
                         className="mt-4 text-red-500 hover:text-red-600 font-medium"
                       >
-                        Start Hosting →
+                        {t("profile.hosting.start")}
                       </button>
                     </div>
                   ) : (
@@ -816,7 +812,7 @@ export default function ProfileDashboard() {
                               <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-600">
                                 <div className="flex items-center gap-1">
                                   <Home className="w-4 h-4" />
-                                  ${property.monthlyPrice}/month
+                                  ${property.monthlyPrice}{t("profile.hosting.perMonth")}
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <Calendar className="w-4 h-4" />
@@ -825,7 +821,7 @@ export default function ProfileDashboard() {
                                 {property.status === 'pending' && (
                                   <div className="flex items-center gap-1 text-yellow-600">
                                     <Clock className="w-4 h-4" />
-                                    Awaiting approval
+                                    {t("profile.hosting.awaiting")}
                                   </div>
                                 )}
                               </div>
@@ -842,89 +838,22 @@ export default function ProfileDashboard() {
             {activeTab.key === "settings" && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
-                  <h2 className="text-2xl font-semibold text-gray-900">Settings</h2>
-                  <p className="text-gray-600 mt-1">Manage your preferences and privacy</p>
+                  <h2 className="text-2xl font-semibold text-gray-900">{t("profile.settings.title")}</h2>
+                  <p className="text-gray-600 mt-1">{t("profile.settings.subtitle")}</p>
                 </div>
 
                 <div className="p-6">
                   <div className="space-y-6">
-                    {/* Notifications Section */}
+                    {/* Privacy Section */}
                     <div>
                       <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                        <Bell className="w-5 h-5 text-red-500" />
-                        Notifications
-                      </h3>
-                      <div className="space-y-3 pl-7">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            checked={settings.emailNotifications.newMessages}
-                            onChange={(e) => {
-                              const newSettings = {
-                                ...settings,
-                                emailNotifications: {
-                                  ...settings.emailNotifications,
-                                  newMessages: e.target.checked
-                                }
-                              };
-                              setSettings(newSettings);
-                              handleAutoSaveSettings(newSettings);
-                            }}
-                            className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
-                          />
-                          <span className="text-gray-700">Email me about new messages</span>
-                        </label>
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            checked={settings.emailNotifications.bookingConfirmations}
-                            onChange={(e) => {
-                              const newSettings = {
-                                ...settings,
-                                emailNotifications: {
-                                  ...settings.emailNotifications,
-                                  bookingConfirmations: e.target.checked
-                                }
-                              };
-                              setSettings(newSettings);
-                              handleAutoSaveSettings(newSettings);
-                            }}
-                            className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
-                          />
-                          <span className="text-gray-700">Email me about booking confirmations</span>
-                        </label>
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            checked={settings.emailNotifications.promotionalOffers}
-                            onChange={(e) => {
-                              const newSettings = {
-                                ...settings,
-                                emailNotifications: {
-                                  ...settings.emailNotifications,
-                                  promotionalOffers: e.target.checked
-                                }
-                              };
-                              setSettings(newSettings);
-                              handleAutoSaveSettings(newSettings);
-                            }}
-                            className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
-                          />
-                          <span className="text-gray-700">Receive promotional offers</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Privacy Section */}
-                    <div className="pt-6 border-t border-gray-100">
-                      <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                         <Lock className="w-5 h-5 text-red-500" />
-                        Privacy
+                        {t("profile.settings.privacy")}
                       </h3>
                       <div className="space-y-3 pl-7">
                         <label className="flex items-center gap-3 cursor-pointer">
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             checked={settings.privacy.profilePublic}
                             onChange={(e) => {
                               const newSettings = {
@@ -939,11 +868,11 @@ export default function ProfileDashboard() {
                             }}
                             className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
                           />
-                          <span className="text-gray-700">Make my profile public</span>
+                          <span className="text-gray-700">{t("profile.settings.profilePublic")}</span>
                         </label>
                         <label className="flex items-center gap-3 cursor-pointer">
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             checked={settings.privacy.showEmail}
                             onChange={(e) => {
                               const newSettings = {
@@ -958,7 +887,7 @@ export default function ProfileDashboard() {
                             }}
                             className="w-4 h-4 text-red-500 rounded focus:ring-red-500"
                           />
-                          <span className="text-gray-700">Show my email on profile</span>
+                          <span className="text-gray-700">{t("profile.settings.showEmail")}</span>
                         </label>
                       </div>
                     </div>
@@ -967,32 +896,31 @@ export default function ProfileDashboard() {
                     <div className="pt-6 border-t border-gray-100">
                       <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                         <Globe className="w-5 h-5 text-red-500" />
-                        Language & Region
+                        {t("profile.settings.language")}
                       </h3>
                       <div className="space-y-4 pl-7">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
-                          <select 
-                            value={settings.language}
+                          <label className="block text-sm font-medium text-gray-700 mb-2">{t("profile.settings.languageLabel")}</label>
+                          <select
+                            value={language}
                             onChange={(e) => {
-                              const newSettings = {
-                                ...settings,
-                                language: e.target.value
-                              };
-                              setSettings(newSettings);
-                              handleAutoSaveSettings(newSettings);
+                              const lang = e.target.value as "en" | "am";
+                              if (lang === "en" || lang === "am") {
+                                setLanguage(lang);
+                                const newSettings = { ...settings, language: lang };
+                                setSettings(newSettings);
+                                handleAutoSaveSettings(newSettings);
+                              }
                             }}
                             className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
                           >
                             <option value="en">English (US)</option>
                             <option value="am">አማርኛ (Amharic)</option>
-                            <option value="fr">Français</option>
-                            <option value="es">Español</option>
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                          <select 
+                          <label className="block text-sm font-medium text-gray-700 mb-2">{t("profile.settings.currencyLabel")}</label>
+                          <select
                             value={settings.currency || "USD"}
                             onChange={(e) => {
                               const newSettings = {
@@ -1014,12 +942,12 @@ export default function ProfileDashboard() {
                     </div>
 
                     <div className="pt-6">
-                      <button 
+                      <button
                         onClick={handleSaveSettings}
                         disabled={savingSettings}
                         className="px-6 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {savingSettings ? "Saving..." : "Save Settings"}
+                        {savingSettings ? t("profile.settings.saving") : t("profile.settings.save")}
                       </button>
                     </div>
                   </div>

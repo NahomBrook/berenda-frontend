@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import Navbar from "@/components/layout/Navbar";
 import { createProperty, uploadPropertyImages } from "@/utils/api";
 import DragDropImageUpload from "@/components/DragDropImageUpload";
+import { useLanguage } from "@/context/LanguageContext";
 
 // Dynamically import map components with no SSR
 const MapWithNoSSR = dynamic(
@@ -74,6 +75,7 @@ const ADDIS_ABABA_AREAS = [
 export default function HostPropertyPage() {
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
+  const { t } = useLanguage();
   const [currentStep, setCurrentStep] = useState<HostingStep>(HostingStep.BASIC_INFO);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -346,7 +348,7 @@ export default function HostPropertyPage() {
         await uploadPropertyImages(propertyId, imageFiles);
       }
 
-      setSuccessMessage("Your property has been listed successfully! Redirecting...");
+      setSuccessMessage(t("host.success"));
       setTimeout(() => router.push(`/listings/${propertyId}`), 2500);
       
     } catch (err: any) {
@@ -381,21 +383,21 @@ export default function HostPropertyPage() {
             <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back
+            {t("common.back")}
           </button>
           
-          <h1 className="text-3xl font-light text-gray-900 mb-2">List Your Property</h1>
-          <p className="text-gray-500">Share your space and start earning</p>
+          <h1 className="text-3xl font-light text-gray-900 mb-2">{t("host.listYourProperty")}</h1>
+          <p className="text-gray-500">{t("host.share")}</p>
         </div>
 
         {/* Progress bar */}
         <div className="mb-8">
           <div className="flex justify-between text-sm text-gray-500 mb-2">
-            <span className={currentStep >= HostingStep.BASIC_INFO ? "text-red-600" : ""}>Basic Info</span>
-            <span className={currentStep >= HostingStep.LOCATION ? "text-red-600" : ""}>Location</span>
-            <span className={currentStep >= HostingStep.MEDIA ? "text-red-600" : ""}>Media</span>
-            <span className={currentStep >= HostingStep.AMENITIES ? "text-red-600" : ""}>Amenities</span>
-            <span className={currentStep >= HostingStep.REVIEW ? "text-red-600" : ""}>Review</span>
+            <span className={currentStep >= HostingStep.BASIC_INFO ? "text-red-600" : ""}>{t("host.step.basicInfo")}</span>
+            <span className={currentStep >= HostingStep.LOCATION ? "text-red-600" : ""}>{t("host.step.location")}</span>
+            <span className={currentStep >= HostingStep.MEDIA ? "text-red-600" : ""}>{t("host.step.media")}</span>
+            <span className={currentStep >= HostingStep.AMENITIES ? "text-red-600" : ""}>{t("host.step.amenities")}</span>
+            <span className={currentStep >= HostingStep.REVIEW ? "text-red-600" : ""}>{t("host.step.review")}</span>
           </div>
           <div className="h-1 bg-gray-200 rounded-full">
             <div 
@@ -427,11 +429,11 @@ export default function HostPropertyPage() {
           {/* Step 1: Basic Info */}
           {currentStep === HostingStep.BASIC_INFO && (
             <div className="space-y-6">
-              <h2 className="text-xl font-light text-gray-900 mb-4">Basic Information</h2>
+              <h2 className="text-xl font-light text-gray-900 mb-4">{t("host.section.basic")}</h2>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Property Title <span className="text-red-500">*</span>
+                  {t("host.propertyTitle")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -439,14 +441,14 @@ export default function HostPropertyPage() {
                   value={formData.title}
                   onChange={handleInputChange}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  placeholder="e.g., Cozy Studio in Downtown"
+                  placeholder={t("host.titlePlaceholder")}
                   maxLength={100}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description <span className="text-red-500">*</span>
+                  {t("host.description")} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   name="description"
@@ -454,7 +456,7 @@ export default function HostPropertyPage() {
                   onChange={handleInputChange}
                   rows={5}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  placeholder="Describe your property..."
+                  placeholder={t("host.descriptionPlaceholder")}
                   maxLength={1000}
                 />
               </div>
@@ -462,7 +464,7 @@ export default function HostPropertyPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monthly Price (ETB) <span className="text-red-500">*</span>
+                    {t("host.field.monthlyPrice")} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -477,7 +479,7 @@ export default function HostPropertyPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Bedrooms
+                    {t("host.field.bedrooms")}
                   </label>
                   <input
                     type="number"
@@ -492,7 +494,7 @@ export default function HostPropertyPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Bathrooms
+                    {t("host.field.bathrooms")}
                   </label>
                   <input
                     type="number"
@@ -509,7 +511,7 @@ export default function HostPropertyPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Area (m²)
+                  {t("host.area")}
                 </label>
                 <input
                   type="number"
@@ -528,13 +530,13 @@ export default function HostPropertyPage() {
           {currentStep === HostingStep.LOCATION && (
             <div className="space-y-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-light text-gray-900">Location</h2>
+                <h2 className="text-xl font-light text-gray-900">{t("host.step.location")}</h2>
               </div>
 
               {/* Quick Area Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quick Select Area in Addis Ababa
+                  {t("host.quickSelect")}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {ADDIS_ABABA_AREAS.map((area) => (
@@ -553,13 +555,13 @@ export default function HostPropertyPage() {
               {/* Search Location */}
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Search for a specific location
+                  {t("host.searchLocation")}
                 </label>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search for a place, landmark, or address..."
+                  placeholder={t("host.searchPlaceholder")}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
                 {showSearchResults && searchResults.length > 0 && (
@@ -594,14 +596,14 @@ export default function HostPropertyPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  {gettingLocation ? "Getting location..." : "Use my current location"}
+                  {gettingLocation ? t("host.gettingLocation") : t("host.useMyLocation")}
                 </button>
               </div>
 
               {/* Location Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Address/Location <span className="text-red-500">*</span>
+                  {t("host.address")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -609,7 +611,7 @@ export default function HostPropertyPage() {
                   value={formData.location}
                   onChange={handleInputChange}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  placeholder="Address will appear when you click on the map"
+                  placeholder={t("host.field.addressPlaceholder")}
                   readOnly
                 />
               </div>
@@ -617,7 +619,7 @@ export default function HostPropertyPage() {
               {/* Map */}
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Click on the map to set exact location <span className="text-red-500">*</span>
+                  {t("host.mapClick")} <span className="text-red-500">*</span>
                 </label>
                 <div className={`h-96 rounded-lg overflow-hidden border-2 ${!mapSelected ? 'border-red-500' : 'border-gray-300'}`}>
                   <MapWithNoSSR 
@@ -634,15 +636,13 @@ export default function HostPropertyPage() {
                     className="w-4 h-4 text-red-600"
                   />
                   <label className="text-sm text-gray-600">
-                    {mapSelected 
-                      ? "✓ Location selected! You can proceed." 
-                      : "⚠️ Required: Click on the map to select your property location"}
+                    {mapSelected ? t("host.locationSelected") : t("host.locationRequired")}
                   </label>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 mt-3">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Latitude</label>
+                    <label className="block text-xs text-gray-500 mb-1">{t("host.latitude")}</label>
                     <input
                       type="text"
                       value={formData.latitude}
@@ -651,7 +651,7 @@ export default function HostPropertyPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Longitude</label>
+                    <label className="block text-xs text-gray-500 mb-1">{t("host.longitude")}</label>
                     <input
                       type="text"
                       value={formData.longitude}
@@ -669,14 +669,11 @@ export default function HostPropertyPage() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-light text-gray-900 mb-1">Property Photos</h2>
-                  <p className="text-sm text-gray-500">
-                    Upload up to 10 photos. The first photo will be the cover image.
-                    Drag and drop images anywhere in the upload area.
-                  </p>
+                  <h2 className="text-xl font-light text-gray-900 mb-1">{t("host.photos.title")}</h2>
+                  <p className="text-sm text-gray-500">{t("host.photos.subtitle")}</p>
                 </div>
                 <div className="text-sm text-gray-400">
-                  {imageFiles.length} / 10 uploaded
+                  {imageFiles.length} / 10 {t("host.photos.uploaded")}
                 </div>
               </div>
 
@@ -709,10 +706,8 @@ export default function HostPropertyPage() {
           {/* Step 4: Amenities */}
           {currentStep === HostingStep.AMENITIES && (
             <div className="space-y-6">
-              <h2 className="text-xl font-light text-gray-900 mb-4">Amenities</h2>
-              <p className="text-sm text-gray-500 mb-4">
-                Select all amenities that your property offers
-              </p>
+              <h2 className="text-xl font-light text-gray-900 mb-4">{t("host.amenities.title")}</h2>
+              <p className="text-sm text-gray-500 mb-4">{t("host.amenities.subtitle")}</p>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {AMENITIES_LIST.map((amenity) => (
@@ -740,32 +735,32 @@ export default function HostPropertyPage() {
           {/* Step 5: Review - Compact List View */}
           {currentStep === HostingStep.REVIEW && (
             <div className="space-y-6">
-              <h2 className="text-xl font-light text-gray-900 mb-4">Review Your Listing</h2>
+              <h2 className="text-xl font-light text-gray-900 mb-4">{t("host.review.title")}</h2>
               
               <div className="bg-gray-50 rounded-xl p-6">
                 <div className="space-y-3">
                   {/* Title */}
                   <div className="flex items-baseline gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">Title:</span>
-                    <span className="text-gray-900 font-medium">{formData.title || "Untitled Property"}</span>
+                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.titleLabel")}</span>
+                    <span className="text-gray-900 font-medium">{formData.title || t("host.notSet")}</span>
                   </div>
                   
                   {/* Location */}
                   <div className="flex items-baseline gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">Location:</span>
-                    <span className="text-gray-700">{formData.location || "Not set"}</span>
+                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.location")}</span>
+                    <span className="text-gray-700">{formData.location || t("host.notSet")}</span>
                   </div>
                   
                   {/* Monthly Price */}
                   <div className="flex items-baseline gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">Monthly Price:</span>
+                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.price")}</span>
                     <span className="text-red-600 font-semibold">ETB {formData.monthlyPrice || "0"}</span>
                   </div>
                   
                   {/* Bedrooms */}
                   {formData.bedrooms && (
                     <div className="flex items-baseline gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">Bedrooms:</span>
+                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.bedrooms")}</span>
                       <span className="text-gray-700">{formData.bedrooms}</span>
                     </div>
                   )}
@@ -773,7 +768,7 @@ export default function HostPropertyPage() {
                   {/* Bathrooms */}
                   {formData.bathrooms && (
                     <div className="flex items-baseline gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">Bathrooms:</span>
+                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.bathrooms")}</span>
                       <span className="text-gray-700">{formData.bathrooms}</span>
                     </div>
                   )}
@@ -781,25 +776,25 @@ export default function HostPropertyPage() {
                   {/* Area */}
                   {formData.area && (
                     <div className="flex items-baseline gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">Area:</span>
-                      <span className="text-gray-700">{formData.area} m²</span>
+                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.area")}</span>
+                      <span className="text-gray-700">{formData.area} {t("host.areaSuffix")}</span>
                     </div>
                   )}
                   
                   {/* Coordinates */}
                   <div className="flex items-baseline gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">Coordinates:</span>
+                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.coordinates")}</span>
                     <span className="text-gray-600 font-mono text-sm">
-                      {formData.latitude && formData.longitude 
+                      {formData.latitude && formData.longitude
                         ? `${parseFloat(formData.latitude).toFixed(6)}, ${parseFloat(formData.longitude).toFixed(6)}`
-                        : "Not selected"}
+                        : t("host.notSelected")}
                     </span>
                   </div>
                   
                   {/* Amenities */}
                   {formData.amenities.length > 0 && (
                     <div className="flex gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">Amenities:</span>
+                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.amenities")}</span>
                       <div className="flex flex-wrap gap-1">
                         {formData.amenities.map((a) => (
                           <span key={a} className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-xs">
@@ -812,24 +807,21 @@ export default function HostPropertyPage() {
                   
                   {/* Images */}
                   <div className="flex gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">Images:</span>
-                    <span className="text-gray-700">{imageFiles.length} {imageFiles.length === 1 ? 'image' : 'images'} uploaded</span>
+                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.images")}</span>
+                    <span className="text-gray-700">{imageFiles.length} {imageFiles.length === 1 ? t("host.image") : t("host.images")} {t("host.photos.uploaded")}</span>
                   </div>
                   
                   {/* Description */}
                   {formData.description && (
                     <div className="flex gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">Description:</span>
+                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.description")}</span>
                       <p className="text-gray-700 text-sm flex-1">{formData.description}</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              <p className="text-sm text-gray-500">
-                By clicking "List Property", you agree that your property will be listed on our platform 
-                and subject to our terms and conditions.
-              </p>
+              <p className="text-sm text-gray-500">{t("host.review.terms")}</p>
             </div>
           )}
 
@@ -840,18 +832,18 @@ export default function HostPropertyPage() {
                 onClick={handleBack}
                 className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
               >
-                Back
+                {t("host.back")}
               </button>
             ) : (
               <div></div>
             )}
-            
+
             {currentStep < HostingStep.REVIEW ? (
               <button
                 onClick={handleNext}
                 className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
               >
-                Next
+                {t("host.next")}
               </button>
             ) : (
               <button
@@ -861,7 +853,7 @@ export default function HostPropertyPage() {
                   loading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
-                {loading ? 'Listing...' : 'List Property'}
+                {loading ? t("host.listing") : t("host.button.list")}
               </button>
             )}
           </div>

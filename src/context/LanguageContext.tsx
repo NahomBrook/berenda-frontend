@@ -15,24 +15,23 @@ interface LanguageContextProps {
 
 const LanguageContext = createContext<LanguageContextProps | undefined>(undefined);
 
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [languageState, setLanguageState] = useState<Language>("en");
+// Read language from localStorage synchronously (safe — only runs on client)
+function getInitialLanguage(): Language {
+  if (typeof window === "undefined") return "en";
+  const saved = window.localStorage.getItem("language");
+  if (saved === "en" || saved === "am") return saved;
+  return "en";
+}
 
-  // Load language preference from local storage on mount
-  useEffect(() => {
-    const savedLanguage = localStorage.getItem("language");
-    if (savedLanguage === "en" || savedLanguage === "am") {
-      setLanguageState(savedLanguage as Language);
-    }
-  }, []);
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Lazy initializer — reads localStorage on first render, no async gap
+  const [languageState, setLanguageState] = useState<Language>(getInitialLanguage);
 
   const toggleLanguage = () => {
     setLanguageState((prev) => {
       const next = prev === "en" ? "am" : "en";
       localStorage.setItem("language", next);
-      try {
-        i18n.changeLanguage(next);
-      } catch (_) {}
+      try { i18n.changeLanguage(next); } catch (_) {}
       return next;
     });
   };
@@ -41,27 +40,20 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (lang !== "en" && lang !== "am") return;
     setLanguageState(lang);
     localStorage.setItem("language", lang);
-    try {
-      i18n.changeLanguage(lang);
-    } catch (err) {
-      // ignore
-    }
+    try { i18n.changeLanguage(lang); } catch (_) {}
   };
 
   const t = (key: TranslationKey): string => {
-    const lang = languageState;
-    const langPack = (translations as any)[lang] as Record<string, string> | undefined;
+    const langPack = (translations as any)[languageState] as Record<string, string> | undefined;
     const enPack = (translations as any)["en"] as Record<string, string> | undefined;
     if (langPack && key in langPack) return langPack[key];
     if (enPack && key in enPack) return enPack[key];
     return String(key);
   };
 
-  // ensure i18n initialized language matches
+  // Keep i18n in sync
   useEffect(() => {
-    try {
-      i18n.changeLanguage(languageState);
-    } catch (_) {}
+    try { i18n.changeLanguage(languageState); } catch (_) {}
   }, [languageState]);
 
   return (

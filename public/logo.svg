@@ -1,12 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 100" fill="none">
+  <!--
+    Berenda B logo:
+    - Thick vertical left stroke
+    - Upper bump: curves right like a P (smaller, tighter)
+    - Lower bump: large open circle/ring attached at middle and bottom
+  -->
   <!-- Vertical spine -->
   <rect x="8" y="4" width="14" height="92" rx="7" fill="#B91C1C"/>
+
   <!-- Upper bump (P shape) -->
   <path d="M15 4 Q15 4 44 4 Q62 4 62 26 Q62 48 44 48 L15 48" fill="#B91C1C"/>
   <!-- Upper bump inner cutout -->
   <path d="M28 16 Q28 16 42 16 Q50 16 50 26 Q50 36 42 36 L28 36" fill="white"/>
+
   <!-- Lower bump (large ring) -->
   <path d="M15 48 Q15 48 46 44 Q72 44 72 72 Q72 100 46 100 L15 96" fill="#B91C1C"/>
-  <!-- Lower bump inner cutout -->
+  <!-- Lower bump inner cutout (open circle) -->
   <path d="M28 58 Q28 55 46 56 Q60 57 60 72 Q60 86 46 87 Q32 88 28 86" fill="white"/>
 </svg>

@@ -8,10 +8,12 @@ import Navbar from "@/components/layout/Navbar";
 import SearchBar from "@/components/home/SearchBar";
 import { propertyAPI } from "@/services/api";
 import type { Property } from "@/types/property";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -171,11 +173,11 @@ export default function Home() {
         <div className="max-w-6xl mx-auto mt-8 px-4 text-center">
           <div className="bg-red-50 border border-red-200 rounded-lg p-8">
             <p className="text-red-600 mb-4">{error}</p>
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             >
-              Try Again
+              {t("common.tryAgain")}
             </button>
           </div>
         </div>
@@ -195,13 +197,13 @@ export default function Home() {
       <div className="max-w-6xl mx-auto px-4">
         {properties.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No properties found</p>
-            <p className="text-gray-400 text-sm mt-2">Try adjusting your search filters</p>
+            <p className="text-gray-500 text-lg">{t("home.noProperties")}</p>
+            <p className="text-gray-400 text-sm mt-2">{t("home.noPropertiesHint")}</p>
           </div>
         ) : (
           <>
             <div className="mb-4 text-sm text-gray-600 mt-8">
-              Found {properties.length} properties
+              {t("home.found")} {properties.length} {t("home.properties")}
               {currentFilters.location && ` in ${currentFilters.location}`}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -235,14 +237,14 @@ export default function Home() {
                     <div className="flex justify-between items-center">
                       <p className="text-red-600 font-semibold">
                         ${property.monthlyPrice.toLocaleString()}
-                        <span className="text-sm text-gray-500 font-normal">/month</span>
+                        <span className="text-sm text-gray-500 font-normal">{t("home.perMonth")}</span>
                       </p>
                       {property.bedrooms && (
                         <span className="text-xs text-gray-500 flex items-center">
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                           </svg>
-                          {property.bedrooms} {property.bedrooms === 1 ? 'bed' : 'beds'}
+                          {property.bedrooms} {property.bedrooms === 1 ? t("home.bed") : t("home.beds")}
                         </span>
                       )}
                     </div>

@@ -14,6 +14,8 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <script src="https://accounts.google.com/gsi/client" async defer></script>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="shortcut icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
       <body suppressHydrationWarning>
         <LanguageProvider>

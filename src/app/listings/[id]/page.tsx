@@ -360,12 +360,12 @@ export default function PropertyDetailPage() {
         <Navbar />
         <div className="max-w-4xl mx-auto mt-8 px-4 text-center">
           <div className="bg-red-50 border border-red-200 rounded-lg p-8">
-            <p className="text-red-600 mb-4">{error || "Property not found"}</p>
+            <p className="text-red-600 mb-4">{error || t("listings.notFound")}</p>
             <button
               onClick={() => router.push("/")}
               className="mt-4 text-red-500 hover:text-red-600"
             >
-              Return to Home
+              {t("listings.returnHome")}
             </button>
           </div>
         </div>
@@ -397,7 +397,7 @@ export default function PropertyDetailPage() {
             <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to listings
+            {t("listings.back")}
           </button>
           
           <h1 className="text-3xl font-light text-gray-900 mb-2">{safeTitle}</h1>
@@ -410,11 +410,11 @@ export default function PropertyDetailPage() {
           </div>
           <div className="mt-2">
             <span className="text-2xl font-semibold text-red-600">${safeMonthlyPrice.toLocaleString()}</span>
-            <span className="text-gray-500">/month</span>
+            <span className="text-gray-500">{t("listings.perMonth")}</span>
           </div>
           {property.approvalStatus === 'pending' && (
             <span className="inline-block mt-2 bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full text-sm border border-yellow-200">
-              Pending Approval
+              {t("listings.pendingApproval")}
             </span>
           )}
         </div>
@@ -509,7 +509,7 @@ export default function PropertyDetailPage() {
                   <Bed className="w-5 h-5 text-gray-500" />
                   <div>
                     <div className="text-lg font-semibold text-gray-900">{property.bedrooms}</div>
-                    <div className="text-sm text-gray-500">Bedrooms</div>
+                    <div className="text-sm text-gray-500">{t("listings.bedrooms")}</div>
                   </div>
                 </div>
               )}
@@ -518,7 +518,7 @@ export default function PropertyDetailPage() {
                   <Bath className="w-5 h-5 text-gray-500" />
                   <div>
                     <div className="text-lg font-semibold text-gray-900">{property.bathrooms}</div>
-                    <div className="text-sm text-gray-500">Bathrooms</div>
+                    <div className="text-sm text-gray-500">{t("listings.bathrooms")}</div>
                   </div>
                 </div>
               )}
@@ -527,7 +527,7 @@ export default function PropertyDetailPage() {
                   <Users className="w-5 h-5 text-gray-500" />
                   <div>
                     <div className="text-lg font-semibold text-gray-900">{property.maxGuests}</div>
-                    <div className="text-sm text-gray-500">Max Guests</div>
+                    <div className="text-sm text-gray-500">{t("listings.maxGuests")}</div>
                   </div>
                 </div>
               )}
@@ -536,7 +536,7 @@ export default function PropertyDetailPage() {
                   <Maximize2 className="w-5 h-5 text-gray-500" />
                   <div>
                     <div className="text-lg font-semibold text-gray-900">{property.area} m²</div>
-                    <div className="text-sm text-gray-500">Living area</div>
+                    <div className="text-sm text-gray-500">{t("listings.livingArea")}</div>
                   </div>
                 </div>
               )}
@@ -544,16 +544,16 @@ export default function PropertyDetailPage() {
 
             {/* Description */}
             <div className="bg-white p-6 rounded-lg border border-gray-100">
-              <h2 className="text-lg font-medium text-gray-900 mb-3">About this property</h2>
+              <h2 className="text-lg font-medium text-gray-900 mb-3">{t("listings.about")}</h2>
               <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
-                {safeDescription || 'No description provided.'}
+                {safeDescription || t("listings.noDescription")}
               </p>
             </div>
 
             {/* Amenities */}
             {property.amenities && property.amenities.length > 0 && (
               <div className="bg-white p-6 rounded-lg border border-gray-100">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Amenities</h2>
+                <h2 className="text-lg font-medium text-gray-900 mb-4">{t("listings.amenities")}</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {property.amenities.map((amenity) => {
                     const Icon = amenityIcons[amenity] || Sparkles;
@@ -571,7 +571,7 @@ export default function PropertyDetailPage() {
             {/* Location Map - with lower z-index */}
             {property.latitude && property.longitude && (
               <div className="bg-white p-6 rounded-lg border border-gray-100 relative z-0">
-                <h2 className="text-lg font-medium text-gray-900 mb-3">Location</h2>
+                <h2 className="text-lg font-medium text-gray-900 mb-3">{t("listings.location")}</h2>
                 <div className="h-64 rounded-lg overflow-hidden">
                   <PropertyMapDisplay 
                     latitude={property.latitude} 
@@ -588,7 +588,7 @@ export default function PropertyDetailPage() {
             {/* Owner Info */}
             {property.owner && (
               <div className="bg-white p-6 rounded-lg border border-gray-100">
-                <h2 className="text-lg font-medium text-gray-900 mb-3">Hosted by</h2>
+                <h2 className="text-lg font-medium text-gray-900 mb-3">{t("listings.hostedBy")}</h2>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="w-12 h-12 bg-red-100 rounded-full mr-3 flex items-center justify-center">
@@ -597,8 +597,8 @@ export default function PropertyDetailPage() {
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{property.owner.fullName || 'Property Owner'}</p>
-                      <p className="text-sm text-gray-500">Host</p>
+                      <p className="font-medium text-gray-900">{property.owner.fullName || t("listings.propertyOwner")}</p>
+                      <p className="text-sm text-gray-500">{t("listings.host")}</p>
                     </div>
                   </div>
                   
@@ -608,7 +608,7 @@ export default function PropertyDetailPage() {
                       className="flex items-center gap-2 text-red-600 hover:text-red-700 font-medium text-sm border border-red-200 px-4 py-2 rounded-lg hover:bg-red-50 transition"
                     >
                       <MessageCircle className="w-4 h-4" />
-                      Contact Host
+                      {t("listings.contactHost")}
                     </button>
                   )}
                 </div>
@@ -621,14 +621,14 @@ export default function PropertyDetailPage() {
             <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-24">
               <div className="mb-4">
                 <span className="text-2xl font-light text-gray-900">${safeMonthlyPrice.toLocaleString()}</span>
-                <span className="text-gray-500">/month</span>
+                <span className="text-gray-500">{t("listings.perMonth")}</span>
               </div>
 
               {bookingStep === 'details' && (
                 <div className="space-y-4">
                   {/* Date Picker Button */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Dates</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("listings.dates")}</label>
                     <button
                       onClick={() => setShowDatePicker(true)}
                       className="w-full border border-gray-200 rounded-lg p-3 text-left hover:border-red-300 transition"
@@ -638,14 +638,14 @@ export default function PropertyDetailPage() {
                         <span className="text-gray-700">
                           {checkIn && checkOut 
                             ? `${formatDate(checkIn)} - ${formatDate(checkOut)}`
-                            : "Select your dates"}
+                            : t("listings.selectDates")}
                         </span>
                       </div>
                     </button>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Guests</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("listings.guests")}</label>
                     <select
                       value={guests}
                       onChange={(e) => setGuests(Number(e.target.value))}
@@ -653,7 +653,7 @@ export default function PropertyDetailPage() {
                     >
                       {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
                         <option key={num} value={num}>
-                          {num} {num === 1 ? 'guest' : 'guests'}
+                          {num} {num === 1 ? t("listings.guest") : t("listings.guestPlural")}
                         </option>
                       ))}
                     </select>
