@@ -11,7 +11,7 @@ const content = {
     sections: [
       {
         heading: "1. Acceptance of Terms",
-        body: "By accessing or using Berenda ("the Platform"), you agree to be bound by these Terms and Conditions. If you do not agree, please do not use the Platform.",
+        body: "By accessing or using Berenda (the Platform), you agree to be bound by these Terms and Conditions. If you do not agree, please do not use the Platform.",
       },
       {
         heading: "2. Description of Service",
