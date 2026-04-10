@@ -40,12 +40,13 @@ export default function PropertiesTable() {
   const handleApprove = async (id: string) => {
     if (pendingRef.current[id]) return;
     pendingRef.current[id] = true;
+    removeLocally(id);
     try {
       await approveProperty(id);
       setToast({ msg: "Property approved — host has been notified.", type: "success" });
-      removeLocally(id);
     } catch (err: any) {
       setToast({ msg: err?.message || "Failed to approve", type: "error" });
+      fetchProperties();
     } finally {
       pendingRef.current[id] = false;
     }
@@ -55,12 +56,13 @@ export default function PropertiesTable() {
     const reason = prompt("Reason for rejection (optional):");
     if (pendingRef.current[id]) return;
     pendingRef.current[id] = true;
+    removeLocally(id);
     try {
       await rejectProperty(id, reason || undefined);
       setToast({ msg: "Property rejected — host has been notified.", type: "success" });
-      removeLocally(id);
     } catch (err: any) {
       setToast({ msg: err?.message || "Failed to reject", type: "error" });
+      fetchProperties();
     } finally {
       pendingRef.current[id] = false;
     }

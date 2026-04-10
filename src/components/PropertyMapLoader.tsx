@@ -47,23 +47,22 @@ function MapClickHandler({ onLocationSelect }: { onLocationSelect: PropertyMapLo
 }
 
 export default function PropertyMapLoader({ onLocationSelect, zoomToLocation }: PropertyMapLoaderProps) {
-  const [mapCenter, setMapCenter] = useState<[number, number]>([9.0320, 38.7469]);
-  const [mapZoom, setMapZoom] = useState(13);
   const [markerPos, setMarkerPos] = useState<[number, number] | null>(null);
   const mapRef = useRef<any>(null);
 
   useEffect(() => {
     if (zoomToLocation && zoomToLocation.lat && zoomToLocation.lng) {
-      setMapCenter([zoomToLocation.lat, zoomToLocation.lng]);
-      setMapZoom(16);
       setMarkerPos([zoomToLocation.lat, zoomToLocation.lng]);
+      if (mapRef.current) {
+        mapRef.current.setView([zoomToLocation.lat, zoomToLocation.lng], 16);
+      }
     }
   }, [zoomToLocation]);
 
   return (
     <MapContainer
-      center={mapCenter}
-      zoom={mapZoom}
+      center={[9.0320, 38.7469]}
+      zoom={13}
       style={{ height: "100%", width: "100%" }}
       scrollWheelZoom={true}
       ref={mapRef}
