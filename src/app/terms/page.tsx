@@ -114,8 +114,8 @@ export default function TermsPage() {
               <h2 className="text-xl font-semibold text-gray-900 mb-3">12. Contact</h2>
               <p>
                 For questions about these Terms, please contact us at{" "}
-                <a href="mailto:support@berenda.et" className="text-red-600 hover:underline">
-                  support@berenda.et
+                <a href="mailto:berenda@gmail.com" className="text-red-600 hover:underline">
+                  berenda@gmail.com
                 </a>
               </p>
             </section>

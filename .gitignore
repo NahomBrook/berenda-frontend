@@ -1,4 +1,22 @@
+# Dependencies
 node_modules/
 
+# Next.js build output
 .next/
+out/
+
+# Environment variables
 .env*
+!.env.example
+
+# Build artifacts
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

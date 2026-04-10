@@ -186,15 +186,15 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <Navbar 
+    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col">
+      <Navbar
         onSearchClick={handleSearchClick}
         showSearchButton={showSearchInNav}
       />
-      
+
       <SearchBar isVisible={showSearchBar} onSearch={handleSearch} />
 
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="max-w-6xl mx-auto px-4 flex-1 w-full">
         {properties.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">{t("home.noProperties")}</p>
