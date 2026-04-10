@@ -4,7 +4,7 @@ import { useState, ChangeEvent, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/layout/Navbar";
-import { createProperty, uploadPropertyImages } from "@/utils/api";
+import { createProperty, uploadPropertyImages, updateUserLocation, reverseGeocode } from "@/utils/api";
 import DragDropImageUpload from "@/components/DragDropImageUpload";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -194,9 +194,9 @@ export default function HostPropertyPage() {
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
-        
+
         setFormData(prev => ({
           ...prev,
           latitude: latitude.toString(),
@@ -204,24 +204,16 @@ export default function HostPropertyPage() {
           location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
         }));
         setMapSelected(true);
-        
-        // Try to get address
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.display_name) {
-              setFormData(prev => ({
-                ...prev,
-                location: data.display_name,
-              }));
-              setZoomToLocation({ lat: latitude, lng: longitude, address: data.display_name });
-            }
-          })
-          .catch(() => {
-            setZoomToLocation({ lat: latitude, lng: longitude, address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` });
-          });
-        
         setGettingLocation(false);
+
+        // Persist location to backend and resolve address in parallel
+        const [address] = await Promise.all([
+          reverseGeocode(latitude, longitude),
+          updateUserLocation(latitude, longitude),
+        ]);
+
+        setFormData(prev => ({ ...prev, location: address }));
+        setZoomToLocation({ lat: latitude, lng: longitude, address });
       },
       (error) => {
         console.error("Geolocation error:", error.code, error.message);

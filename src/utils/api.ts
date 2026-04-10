@@ -276,6 +276,30 @@ export async function checkPropertyEligibility(
   }
 }
 
+// ==================== USER LOCATION ====================
+
+export async function updateUserLocation(latitude: number, longitude: number) {
+  const token = localStorage.getItem("berenda_token");
+  if (!token) return;
+
+  await fetch(`${API_BASE_URL}/users/me/location`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ latitude, longitude }),
+  });
+}
+
+export async function reverseGeocode(latitude: number, longitude: number): Promise<string> {
+  const res = await fetch(
+    `${API_BASE_URL}/locations/reverse?lat=${latitude}&lng=${longitude}`
+  );
+  const data = await res.json().catch(() => ({}));
+  return data?.data?.address || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+}
+
 // ==================== ADDITIONAL HELPERS ====================
 
 export async function getPropertyAvailability(propertyId: string, month?: string) {
