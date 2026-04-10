@@ -99,6 +99,42 @@ export async function getAllBookings(page: number = 1, status: string = "all") {
   return handleResponse(res);
 }
 
+// Delete Property
+export async function deleteProperty(propertyId: string) {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+
+  const res = await fetch(`${API_BASE}/properties/${propertyId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+// Ban / Unban User
+export async function banUser(userId: string, reason: string) {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+
+  const res = await fetch(`${API_BASE}/users/${userId}/ban`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  });
+  return handleResponse(res);
+}
+
+export async function unbanUser(userId: string) {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+
+  const res = await fetch(`${API_BASE}/users/${userId}/unban`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
 // Approve/Reject Property
 export async function approveProperty(propertyId: string) {
   const token = getToken();
