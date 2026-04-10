@@ -111,10 +111,11 @@ export default function HostPropertyPage() {
     setIsMounted(true);
   }, []);
 
-  // Check authentication
+  // Check authentication - FIXED: Use correct token key
   useEffect(() => {
     if (!isMounted) return;
-    const token = localStorage.getItem("berenda_token");
+    // Try both possible token keys
+    const token = localStorage.getItem("token") || localStorage.getItem("berenda_token");
     if (!token) {
       router.push("/auth/login");
     } else {
@@ -180,46 +181,111 @@ export default function HostPropertyPage() {
     setZoomToLocation({ lat: area.lat, lng: area.lng, address });
   };
 
+  // FIXED: Improved getCurrentLocation function with timeout and better error handling
   const getCurrentLocation = () => {
     setGettingLocation(true);
+    setError(null);
+    
     if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser");
+      setError("Geolocation is not supported by your browser. Please search for a location or select from the map.");
       setGettingLocation(false);
       return;
     }
 
+    // Set a timeout for geolocation (10 seconds max)
+    const timeoutId = setTimeout(() => {
+      if (gettingLocation) {
+        setGettingLocation(false);
+        setError("Location request timed out. Please try again or search for a location manually.");
+      }
+    }, 10000);
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        clearTimeout(timeoutId);
         try {
           const { latitude, longitude } = position.coords;
           
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
-          );
-          const data = await response.json();
+          // Use a timeout for the reverse geocoding request
+          const controller = new AbortController();
+          const geocodeTimeout = setTimeout(() => controller.abort(), 8000);
           
-          const address = data.display_name || `${latitude}, ${longitude}`;
-          
-          setFormData(prev => ({
-            ...prev,
-            location: address,
-            latitude: latitude.toString(),
-            longitude: longitude.toString(),
-          }));
-          setMapSelected(true);
-          
-          setZoomToLocation({ lat: latitude, lng: longitude, address });
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+              { signal: controller.signal }
+            );
+            clearTimeout(geocodeTimeout);
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Extract a readable address
+            let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            if (data.display_name) {
+              // Truncate if too long
+              address = data.display_name.length > 100 
+                ? data.display_name.substring(0, 100) + "..."
+                : data.display_name;
+            } else if (data.address) {
+              const addr = data.address;
+              address = [addr.road, addr.suburb, addr.city, addr.state]
+                .filter(Boolean)
+                .join(", ") || address;
+            }
+            
+            setFormData(prev => ({
+              ...prev,
+              location: address,
+              latitude: latitude.toString(),
+              longitude: longitude.toString(),
+            }));
+            setMapSelected(true);
+            setZoomToLocation({ lat: latitude, lng: longitude, address });
+            setError(null);
+          } catch (fetchError) {
+            console.error("Error fetching location details:", fetchError);
+            // Still set the coordinates even if reverse geocoding fails
+            setFormData(prev => ({
+              ...prev,
+              location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)} (Current Location)`,
+              latitude: latitude.toString(),
+              longitude: longitude.toString(),
+            }));
+            setMapSelected(true);
+            setZoomToLocation({ lat: latitude, lng: longitude, address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` });
+            setError("Location set with coordinates only. You can edit the address if needed.");
+          }
         } catch (err) {
-          console.error("Error getting location details:", err);
-          setError("Failed to get location details");
+          console.error("Error processing location:", err);
+          setError("Failed to get location details. Please search for your location manually.");
         } finally {
           setGettingLocation(false);
         }
       },
       (error) => {
+        clearTimeout(timeoutId);
         console.error("Geolocation error:", error);
-        setError("Failed to get your location. Please select on map.");
         setGettingLocation(false);
+        
+        let errorMessage = "Failed to get your location. ";
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage += "Please allow location access in your browser settings.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage += "Location information is unavailable. Please search manually.";
+            break;
+          case error.TIMEOUT:
+            errorMessage += "Location request timed out. Please try again.";
+            break;
+          default:
+            errorMessage += "Please search for your location manually.";
+        }
+        setError(errorMessage);
       }
     );
   };
@@ -322,6 +388,28 @@ export default function HostPropertyPage() {
     });
   };
 
+  // Add to wishlist function
+  const addToWishlist = async (propertyId: string) => {
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("berenda_token");
+      if (!token) return false;
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/favorites`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ propertyId }),
+      });
+
+      const data = await response.json();
+      return data.success;
+    } catch (error) {
+      console.error("Error adding to wishlist:", error);
+      return false;
+    }
+  };
 
   const handleSubmit = async () => {
     setError(null);
@@ -346,6 +434,15 @@ export default function HostPropertyPage() {
 
       if (imageFiles.length > 0 && propertyId) {
         await uploadPropertyImages(propertyId, imageFiles);
+      }
+
+      // Ask user if they want to add to wishlist
+      const addToWishlistConfirm = window.confirm(
+        "Property listed successfully! Would you like to add it to your wishlist?"
+      );
+      
+      if (addToWishlistConfirm && propertyId) {
+        await addToWishlist(propertyId);
       }
 
       setSuccessMessage(t("host.success"));
@@ -584,7 +681,7 @@ export default function HostPropertyPage() {
                 )}
               </div>
 
-              {/* Use Current Location Button */}
+              {/* Use Current Location Button - FIXED */}
               <div className="flex justify-center">
                 <button
                   type="button"
