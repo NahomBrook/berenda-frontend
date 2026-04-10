@@ -109,6 +109,7 @@ export default function HostPropertyPage() {
   
   // Ref to track if location request is active
   const locationRequestRef = useRef<boolean>(false);
+  const watchIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -183,7 +184,7 @@ export default function HostPropertyPage() {
     setZoomToLocation({ lat: area.lat, lng: area.lng, address });
   };
 
-  // FIXED: Completely rewritten getCurrentLocation with better error handling
+  // FIXED: Optimized getCurrentLocation with better timeout handling
   const getCurrentLocation = () => {
     // Prevent multiple simultaneous requests
     if (locationRequestRef.current || gettingLocation) {
@@ -203,105 +204,106 @@ export default function HostPropertyPage() {
       return;
     }
 
-    // Show a helpful message about browser permissions
-    console.log("Requesting location... Make sure browser location access is allowed");
+    console.log("Requesting location with optimized settings...");
     
-    // Set multiple timeouts for different stages
-    const permissionTimeout = setTimeout(() => {
-      if (gettingLocation) {
-        setError("Location permission request is taking too long. Please check if you've blocked location access for this site.");
-      }
-    }, 3000);
+    // Clear any existing watch
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
     
+    // Set a timeout for the entire operation (30 seconds - longer for better chance)
     const locationTimeout = setTimeout(() => {
       if (gettingLocation) {
-        setError("Location request timed out after 15 seconds. Please try again or search manually.");
+        console.error("Location request timed out after 30 seconds");
+        setError("Location request taking too long. Please try again or use the search bar.");
         setGettingLocation(false);
         locationRequestRef.current = false;
       }
-    }, 15000);
+    }, 30000);
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        clearTimeout(permissionTimeout);
+    // Use watchPosition instead of getCurrentPosition for better success rate
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        // Clear timeout on success
         clearTimeout(locationTimeout);
         
-        try {
-          const { latitude, longitude } = position.coords;
-          console.log("Got coordinates:", latitude, longitude);
-          
-          // Try to get address, but don't wait too long
-          let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-          
-          try {
-            // Use a shorter timeout for the reverse geocoding
-            const controller = new AbortController();
-            const geocodeTimeout = setTimeout(() => controller.abort(), 5000);
-            
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18`,
-              { signal: controller.signal }
-            );
-            clearTimeout(geocodeTimeout);
-            
-            if (response.ok) {
-              const data = await response.json();
-              if (data.display_name) {
-                address = data.display_name.length > 100 
-                  ? data.display_name.substring(0, 100) + "..."
-                  : data.display_name;
-              }
-            }
-          } catch (geocodeError) {
-            console.warn("Reverse geocoding failed, using coordinates only:", geocodeError);
-            // Keep using coordinates as address
-          }
-          
-          setFormData(prev => ({
-            ...prev,
-            location: address,
-            latitude: latitude.toString(),
-            longitude: longitude.toString(),
-          }));
-          setMapSelected(true);
-          setZoomToLocation({ lat: latitude, lng: longitude, address });
-          setError(null);
-          
-        } catch (err) {
-          console.error("Error processing location:", err);
-          setError("Failed to get location details. Please search for your location manually.");
-        } finally {
-          setGettingLocation(false);
-          locationRequestRef.current = false;
+        const { latitude, longitude, accuracy } = position.coords;
+        console.log("Got coordinates:", { latitude, longitude, accuracy });
+        
+        // Stop watching after successful get
+        if (watchIdRef.current !== null) {
+          navigator.geolocation.clearWatch(watchIdRef.current);
+          watchIdRef.current = null;
         }
+        
+        // Set coordinates immediately
+        setFormData(prev => ({
+          ...prev,
+          latitude: latitude.toString(),
+          longitude: longitude.toString(),
+          location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+        }));
+        setMapSelected(true);
+        
+        // Try to get address in background (don't block UI)
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.display_name) {
+              const address = data.display_name.length > 100 
+                ? data.display_name.substring(0, 100) + "..."
+                : data.display_name;
+              setFormData(prev => ({
+                ...prev,
+                location: address,
+              }));
+              setZoomToLocation({ lat: latitude, lng: longitude, address });
+            } else {
+              setZoomToLocation({ lat: latitude, lng: longitude, address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` });
+            }
+          })
+          .catch(() => {
+            setZoomToLocation({ lat: latitude, lng: longitude, address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` });
+          });
+        
+        setError(null);
+        setGettingLocation(false);
+        locationRequestRef.current = false;
       },
       (error) => {
-        clearTimeout(permissionTimeout);
         clearTimeout(locationTimeout);
-        console.error("Geolocation error:", error);
+        console.error("Geolocation error:", error.code, error.message);
+        
+        // Clear watch on error
+        if (watchIdRef.current !== null) {
+          navigator.geolocation.clearWatch(watchIdRef.current);
+          watchIdRef.current = null;
+        }
+        
         setGettingLocation(false);
         locationRequestRef.current = false;
         
         let errorMessage = "";
         switch(error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = "Location access denied. Please enable location access in your browser settings, then click 'Use my current location' again. Or search for a location manually.";
+          case 1: // PERMISSION_DENIED
+            errorMessage = "Location access denied. Please allow location access in your browser settings, then refresh and try again.";
             break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = "Location information unavailable. Please search for your location manually.";
+          case 2: // POSITION_UNAVAILABLE
+            errorMessage = "Location information unavailable. Please search for your location manually or select from the map.";
             break;
-          case error.TIMEOUT:
-            errorMessage = "Location request timed out. Please check your internet connection and try again, or search manually.";
+          case 3: // TIMEOUT
+            errorMessage = "Location request timed out. Please try again or use the search bar to find your location.";
             break;
           default:
-            errorMessage = "Failed to get your location. Please search for your location manually.";
+            errorMessage = "Failed to get your location. Please search manually or click on the map.";
         }
         setError(errorMessage);
       },
       {
-        enableHighAccuracy: false, // Set to false for faster response
-        timeout: 10000, // 10 seconds timeout
-        maximumAge: 60000 // Accept cached location up to 1 minute old
+        enableHighAccuracy: true, // Changed to true for better accuracy
+        timeout: 20000, // 20 second timeout
+        maximumAge: 0, // Don't use cached position
       }
     );
   };
@@ -695,7 +697,7 @@ export default function HostPropertyPage() {
                 )}
               </div>
 
-              {/* Use Current Location Button - FIXED */}
+              {/* Use Current Location Button - FIXED with better settings */}
               <div className="flex flex-col items-center gap-3">
                 <button
                   type="button"
@@ -710,10 +712,9 @@ export default function HostPropertyPage() {
                   {gettingLocation ? t("host.gettingLocation") : t("host.useMyLocation")}
                 </button>
                 
-                {/* Help text for location permission */}
                 {gettingLocation && (
                   <p className="text-xs text-gray-500 text-center">
-                    If location is stuck, check your browser's address bar for a location permission popup.
+                    Getting your location... This may take up to 30 seconds.
                   </p>
                 )}
               </div>
