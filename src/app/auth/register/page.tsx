@@ -201,7 +201,18 @@ export default function RegisterPage() {
               className="mr-2"
               disabled={loading}
             />
-            {t("auth.register.agree") || "I agree to the Terms & Conditions"}
+            <span>
+              {t("auth.register.agree") || "I agree to the"}{" "}
+              <a
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-red-500 hover:underline font-medium"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {t("terms.link") || "Terms & Conditions"}
+              </a>
+            </span>
           </label>
 
           <button

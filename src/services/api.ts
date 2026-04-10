@@ -8,7 +8,7 @@ const BASE_URL =
 const api = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 20000, // Render free-tier may cold-start; give 20 s
+  timeout: 65000, // Render free-tier cold-start can take up to 60s
 });
 
 // Attach auth token to every request
@@ -20,14 +20,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 globally (expired / invalid token)
+// Handle 401 globally and retry on timeout (Render cold start)
 api.interceptors.response.use(
   (res) => res,
-  (error) => {
+  async (error) => {
+    const config = error.config;
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('berenda_token');
       localStorage.removeItem('berenda_user');
       window.location.href = '/login';
+      return Promise.reject(error);
+    }
+    // Retry once on timeout (ECONNABORTED) or network error — handles Render cold start
+    if ((error.code === 'ECONNABORTED' || !error.response) && !config._retried) {
+      config._retried = true;
+      config.timeout = 65000;
+      return api(config);
     }
     return Promise.reject(error);
   }

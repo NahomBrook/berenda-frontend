@@ -2,7 +2,8 @@
 "use client";
 
 import { useState } from "react";
-import { X, ChevronDown, ChevronUp, Home, Wifi, Bed, DollarSign } from "lucide-react";
+import { X, ChevronDown, ChevronUp, Home, Wifi, Bed } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface FilterModalProps {
   filters: {
@@ -16,6 +17,7 @@ interface FilterModalProps {
 }
 
 export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalProps) {
+  const { t } = useLanguage();
   const [localFilters, setLocalFilters] = useState(filters);
   const [expandedSections, setExpandedSections] = useState({
     homeType: true,
@@ -24,30 +26,31 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
     bedrooms: true,
   });
 
+  // value = API filter key (English), labelKey = translation key
   const homeTypes = [
-    { value: "Entire home", icon: Home, label: "Entire home" },
-    { value: "Private room", icon: Bed, label: "Private room" },
-    { value: "Hotel room", icon: Home, label: "Hotel room" },
-    { value: "Shared room", icon: Home, label: "Shared room" },
+    { value: "Entire home", icon: Home, labelKey: "filter.type.entireHome" },
+    { value: "Private room", icon: Bed, labelKey: "filter.type.privateRoom" },
+    { value: "Hotel room", icon: Home, labelKey: "filter.type.hotelRoom" },
+    { value: "Shared room", icon: Home, labelKey: "filter.type.sharedRoom" },
   ];
 
   const amenitiesList = [
-    { value: "WiFi", icon: Wifi },
-    { value: "Kitchen", icon: Home },
-    { value: "Washer", icon: Home },
-    { value: "Dryer", icon: Home },
-    { value: "Air conditioning", icon: Home },
-    { value: "Heating", icon: Home },
-    { value: "Pool", icon: Home },
-    { value: "Hot tub", icon: Home },
-    { value: "Free parking", icon: Home },
-    { value: "EV charger", icon: Home },
-    { value: "Pet friendly", icon: Home },
-    { value: "TV", icon: Home },
-    { value: "Desk", icon: Home },
-    { value: "Gym", icon: Home },
-    { value: "Beach access", icon: Home },
-    { value: "Mountain view", icon: Home },
+    { value: "WiFi", icon: Wifi, labelKey: "filter.amenity.wifi" },
+    { value: "Kitchen", icon: Home, labelKey: "filter.amenity.kitchen" },
+    { value: "Washer", icon: Home, labelKey: "filter.amenity.washer" },
+    { value: "Dryer", icon: Home, labelKey: "filter.amenity.dryer" },
+    { value: "Air conditioning", icon: Home, labelKey: "filter.amenity.airConditioning" },
+    { value: "Heating", icon: Home, labelKey: "filter.amenity.heating" },
+    { value: "Pool", icon: Home, labelKey: "filter.amenity.pool" },
+    { value: "Hot tub", icon: Home, labelKey: "filter.amenity.hotTub" },
+    { value: "Free parking", icon: Home, labelKey: "filter.amenity.freeParking" },
+    { value: "EV charger", icon: Home, labelKey: "filter.amenity.evCharger" },
+    { value: "Pet friendly", icon: Home, labelKey: "filter.amenity.petFriendly" },
+    { value: "TV", icon: Home, labelKey: "filter.amenity.tv" },
+    { value: "Desk", icon: Home, labelKey: "filter.amenity.desk" },
+    { value: "Gym", icon: Home, labelKey: "filter.amenity.gym" },
+    { value: "Beach access", icon: Home, labelKey: "filter.amenity.beachAccess" },
+    { value: "Mountain view", icon: Home, labelKey: "filter.amenity.mountainView" },
   ];
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -98,18 +101,16 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
     setLocalFilters({
       homeType: [],
       amenities: [],
-      priceRange: [0, 5000],
+      priceRange: [0, 50000],
       bedrooms: 0,
     });
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return `ETB ${new Intl.NumberFormat('en-ET', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(price);
+    }).format(price)}`;
   };
 
   return (
@@ -117,7 +118,7 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b sticky top-0 bg-white z-10">
-          <h2 className="text-2xl font-semibold">Filters</h2>
+          <h2 className="text-2xl font-semibold">{t("filter.title")}</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -136,7 +137,7 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
             >
               <div className="flex items-center gap-3">
                 <Home className="w-5 h-5 text-gray-600" />
-                <h3 className="text-lg font-medium">Home type</h3>
+                <h3 className="text-lg font-medium">{t("filter.homeType")}</h3>
               </div>
               {expandedSections.homeType ? (
                 <ChevronUp className="w-5 h-5 text-gray-500" />
@@ -146,7 +147,7 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
             </button>
             {expandedSections.homeType && (
               <div className="px-6 pb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {homeTypes.map(({ value, icon: Icon, label }) => (
+                {homeTypes.map(({ value, icon: Icon, labelKey }) => (
                   <button
                     key={value}
                     onClick={() => toggleHomeType(value)}
@@ -157,7 +158,7 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
                     }`}
                   >
                     <Icon className={`w-6 h-6 mb-2 ${localFilters.homeType.includes(value) ? "text-red-500" : "text-gray-500"}`} />
-                    <p className="font-medium">{label}</p>
+                    <p className="font-medium">{t(labelKey)}</p>
                   </button>
                 ))}
               </div>
@@ -171,8 +172,8 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
               className="flex justify-between items-center w-full p-6 hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <DollarSign className="w-5 h-5 text-gray-600" />
-                <h3 className="text-lg font-medium">Price range</h3>
+                <span className="text-gray-600 font-semibold text-sm">ETB</span>
+                <h3 className="text-lg font-medium">{t("filter.priceRange")}</h3>
               </div>
               {expandedSections.priceRange ? (
                 <ChevronUp className="w-5 h-5 text-gray-500" />
@@ -184,30 +185,30 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
               <div className="px-6 pb-6">
                 <div className="flex justify-between mb-4">
                   <div className="flex-1 mr-4">
-                    <label className="block text-sm text-gray-600 mb-2">Minimum</label>
+                    <label className="block text-sm text-gray-600 mb-2">{t("filter.minimum")}</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">ETB</span>
                       <input
                         type="number"
                         value={localFilters.priceRange[0]}
-                        onChange={(e) => handlePriceChange(parseInt(e.target.value), localFilters.priceRange[1])}
-                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        onChange={(e) => handlePriceChange(parseInt(e.target.value) || 0, localFilters.priceRange[1])}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                         min={0}
                         max={localFilters.priceRange[1] - 1}
                       />
                     </div>
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm text-gray-600 mb-2">Maximum</label>
+                    <label className="block text-sm text-gray-600 mb-2">{t("filter.maximum")}</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">ETB</span>
                       <input
                         type="number"
                         value={localFilters.priceRange[1]}
-                        onChange={(e) => handlePriceChange(localFilters.priceRange[0], parseInt(e.target.value))}
-                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        onChange={(e) => handlePriceChange(localFilters.priceRange[0], parseInt(e.target.value) || 0)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                         min={localFilters.priceRange[0] + 1}
-                        max={10000}
+                        max={500000}
                       />
                     </div>
                   </div>
@@ -216,8 +217,8 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
                   <input
                     type="range"
                     min="0"
-                    max="10000"
-                    step="50"
+                    max="500000"
+                    step="1000"
                     value={localFilters.priceRange[0]}
                     onChange={(e) => handlePriceChange(parseInt(e.target.value), localFilters.priceRange[1])}
                     className="w-full mb-2 accent-red-500"
@@ -225,15 +226,15 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
                   <input
                     type="range"
                     min="0"
-                    max="10000"
-                    step="50"
+                    max="500000"
+                    step="1000"
                     value={localFilters.priceRange[1]}
                     onChange={(e) => handlePriceChange(localFilters.priceRange[0], parseInt(e.target.value))}
                     className="w-full accent-red-500"
                   />
                 </div>
                 <div className="mt-4 text-center text-gray-600">
-                  {formatPrice(localFilters.priceRange[0])} - {formatPrice(localFilters.priceRange[1])}
+                  {formatPrice(localFilters.priceRange[0])} — {formatPrice(localFilters.priceRange[1])}
                 </div>
               </div>
             )}
@@ -247,7 +248,7 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
             >
               <div className="flex items-center gap-3">
                 <Bed className="w-5 h-5 text-gray-600" />
-                <h3 className="text-lg font-medium">Bedrooms</h3>
+                <h3 className="text-lg font-medium">{t("filter.bedrooms")}</h3>
               </div>
               {expandedSections.bedrooms ? (
                 <ChevronUp className="w-5 h-5 text-gray-500" />
@@ -268,7 +269,7 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
                           : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
                       }`}
                     >
-                      {num === 0 ? "Any" : `${num}+`}
+                      {num === 0 ? t("filter.any") : `${num}+`}
                     </button>
                   ))}
                 </div>
@@ -284,7 +285,7 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
             >
               <div className="flex items-center gap-3">
                 <Wifi className="w-5 h-5 text-gray-600" />
-                <h3 className="text-lg font-medium">Amenities</h3>
+                <h3 className="text-lg font-medium">{t("filter.amenities")}</h3>
               </div>
               {expandedSections.amenities ? (
                 <ChevronUp className="w-5 h-5 text-gray-500" />
@@ -295,7 +296,7 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
             {expandedSections.amenities && (
               <div className="px-6 pb-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {amenitiesList.map(({ value, icon: Icon }) => (
+                  {amenitiesList.map(({ value, icon: Icon, labelKey }) => (
                     <label
                       key={value}
                       className="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg transition-colors"
@@ -307,7 +308,7 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
                         onChange={() => toggleAmenity(value)}
                         className="w-4 h-4 text-red-500 rounded border-gray-300 focus:ring-red-500"
                       />
-                      <span className="text-gray-700 text-sm">{value}</span>
+                      <span className="text-gray-700 text-sm">{t(labelKey)}</span>
                     </label>
                   ))}
                 </div>
@@ -322,13 +323,13 @@ export function FilterModal({ filters, onFiltersChange, onClose }: FilterModalPr
             onClick={handleClearAll}
             className="px-6 py-3 text-gray-600 underline hover:text-gray-800 transition-colors font-medium"
           >
-            Clear all
+            {t("filter.clearAll")}
           </button>
           <button
             onClick={handleApply}
             className="px-8 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all font-medium shadow-md hover:shadow-lg"
           >
-            Apply filters
+            {t("filter.apply")}
           </button>
         </div>
       </div>

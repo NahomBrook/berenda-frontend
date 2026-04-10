@@ -255,6 +255,21 @@ export default function Home() {
           </>
         )}
       </div>
+
+      {/* Footer */}
+      <footer className="mt-16 border-t bg-white">
+        <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+          <span>{t("footer.copyright")}</span>
+          <div className="flex gap-6">
+            <a href="/terms" className="hover:text-red-600 transition-colors">
+              {t("footer.terms")}
+            </a>
+            <a href="/terms#privacy" className="hover:text-red-600 transition-colors">
+              {t("footer.privacy")}
+            </a>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
