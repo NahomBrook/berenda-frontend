@@ -4,7 +4,7 @@ import { useState, ChangeEvent, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/layout/Navbar";
-import { createProperty, uploadPropertyImages, updateUserLocation, reverseGeocode } from "@/utils/api";
+import { createProperty, uploadPropertyImages } from "@/utils/api";
 import DragDropImageUpload from "@/components/DragDropImageUpload";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -83,7 +83,6 @@ export default function HostPropertyPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [gettingLocation, setGettingLocation] = useState(false);
   const [zoomToLocation, setZoomToLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
   
   // Location state
@@ -181,62 +180,6 @@ export default function HostPropertyPage() {
   };
 
   // Simplified geolocation
-  const getCurrentLocation = () => {
-    if (gettingLocation) return;
-    
-    setGettingLocation(true);
-    setError(null);
-    
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported. Please use the search bar to find your location.");
-      setGettingLocation(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-
-        setFormData(prev => ({
-          ...prev,
-          latitude: latitude.toString(),
-          longitude: longitude.toString(),
-          location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-        }));
-        setMapSelected(true);
-        setGettingLocation(false);
-
-        // Persist location to backend and resolve address in parallel
-        const [address] = await Promise.all([
-          reverseGeocode(latitude, longitude),
-          updateUserLocation(latitude, longitude),
-        ]);
-
-        setFormData(prev => ({ ...prev, location: address }));
-        setZoomToLocation({ lat: latitude, lng: longitude, address });
-      },
-      (error) => {
-        console.error("Geolocation error:", error.code, error.message);
-        setGettingLocation(false);
-
-        if (error.code === 1) {
-          setError("Location access denied. Please allow location access in your browser settings, or use the search bar above.");
-        } else if (error.code === 2) {
-          setError("Your location could not be determined. This may require HTTPS. Please use the search bar above.");
-        } else if (error.code === 3) {
-          setError("Location request timed out. Please try again or use the search bar above.");
-        } else {
-          setError("Unable to get your location. Please use the search bar above.");
-        }
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 30000,
-        maximumAge: 300000
-      }
-    );
-  };
-
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -626,22 +569,6 @@ export default function HostPropertyPage() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Current Location Button - Optional */}
-              <div className="flex justify-center pt-2">
-                <button
-                  type="button"
-                  onClick={getCurrentLocation}
-                  disabled={gettingLocation}
-                  className="flex items-center gap-2 px-4 py-2 text-gray-500 text-sm hover:text-blue-600 transition disabled:opacity-50"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  {gettingLocation ? "Detecting location..." : "Use my current location (if available)"}
-                </button>
               </div>
 
               {/* Location Input - Readonly, shows selected location */}

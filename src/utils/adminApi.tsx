@@ -7,6 +7,12 @@ const getToken = () => {
 };
 
 const handleResponse = async (response: Response) => {
+  if (response.status === 401) {
+    localStorage.removeItem("berenda_token");
+    localStorage.removeItem("berenda_user");
+    window.location.href = "/auth/login";
+    throw new Error("Session expired");
+  }
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "Request failed" }));
     throw new Error(error.message || "Something went wrong");

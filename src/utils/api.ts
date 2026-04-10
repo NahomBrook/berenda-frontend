@@ -131,6 +131,7 @@ export async function createProperty(propertyData: any) {
     body: JSON.stringify(propertyData),
   });
 
+  if (res.status === 401) { handleUnauthorized(); throw new Error("Session expired"); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || "Failed to create property");
   return data;
@@ -149,6 +150,7 @@ export async function updateProperty(id: string, updateData: any) {
     body: JSON.stringify(updateData),
   });
 
+  if (res.status === 401) { handleUnauthorized(); throw new Error("Session expired"); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || "Failed to update property");
   return data;
@@ -163,6 +165,7 @@ export async function deleteProperty(id: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
 
+  if (res.status === 401) { handleUnauthorized(); throw new Error("Session expired"); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || "Failed to delete property");
   return data;
@@ -203,6 +206,7 @@ export async function uploadPropertyImages(propertyId: string, files: File[]) {
     body: formData,
   });
 
+  if (res.status === 401) { handleUnauthorized(); throw new Error("Session expired"); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || "Failed to upload images");
   return data;
@@ -276,28 +280,20 @@ export async function checkPropertyEligibility(
   }
 }
 
-// ==================== USER LOCATION ====================
+// ==================== AUTH HELPERS ====================
 
-export async function updateUserLocation(latitude: number, longitude: number) {
-  const token = localStorage.getItem("berenda_token");
-  if (!token) return;
-
-  await fetch(`${API_BASE_URL}/users/me/location`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ latitude, longitude }),
-  });
+export function clearSession() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("berenda_token");
+  localStorage.removeItem("berenda_user");
 }
 
-export async function reverseGeocode(latitude: number, longitude: number): Promise<string> {
-  const res = await fetch(
-    `${API_BASE_URL}/locations/reverse?lat=${latitude}&lng=${longitude}`
-  );
-  const data = await res.json().catch(() => ({}));
-  return data?.data?.address || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+/** Call after any 401 response — clears session and redirects to login. */
+export function handleUnauthorized() {
+  clearSession();
+  if (typeof window !== "undefined") {
+    window.location.href = "/auth/login";
+  }
 }
 
 // ==================== ADDITIONAL HELPERS ====================
