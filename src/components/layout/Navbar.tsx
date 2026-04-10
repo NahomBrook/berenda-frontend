@@ -139,7 +139,7 @@ export default function Navbar({ onSearchClick, showSearchButton = false }: Navb
         className="flex items-center gap-2 font-bold text-xl cursor-pointer"
         onClick={() => router.push("/")}
       >
-        <img src="/logo.png" alt="Berenda" className="w-7 h-9 object-contain" />
+        <img src="/logo.png" alt="Berenda" className="h-9 w-auto object-contain" />
         <span>Berenda</span>
       </div>
 
