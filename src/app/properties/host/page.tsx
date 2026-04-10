@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ChangeEvent, useEffect, useCallback } from "react";
+import { useState, ChangeEvent, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/layout/Navbar";
@@ -106,15 +106,17 @@ export default function HostPropertyPage() {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // Ref to track if location request is active
+  const locationRequestRef = useRef<boolean>(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Check authentication - FIXED: Use correct token key
+  // Check authentication
   useEffect(() => {
     if (!isMounted) return;
-    // Try both possible token keys
     const token = localStorage.getItem("token") || localStorage.getItem("berenda_token");
     if (!token) {
       router.push("/auth/login");
@@ -181,111 +183,125 @@ export default function HostPropertyPage() {
     setZoomToLocation({ lat: area.lat, lng: area.lng, address });
   };
 
-  // FIXED: Improved getCurrentLocation function with timeout and better error handling
+  // FIXED: Completely rewritten getCurrentLocation with better error handling
   const getCurrentLocation = () => {
+    // Prevent multiple simultaneous requests
+    if (locationRequestRef.current || gettingLocation) {
+      console.log("Location request already in progress");
+      return;
+    }
+    
+    locationRequestRef.current = true;
     setGettingLocation(true);
     setError(null);
     
+    // Check if geolocation is supported
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser. Please search for a location or select from the map.");
       setGettingLocation(false);
+      locationRequestRef.current = false;
       return;
     }
 
-    // Set a timeout for geolocation (10 seconds max)
-    const timeoutId = setTimeout(() => {
+    // Show a helpful message about browser permissions
+    console.log("Requesting location... Make sure browser location access is allowed");
+    
+    // Set multiple timeouts for different stages
+    const permissionTimeout = setTimeout(() => {
       if (gettingLocation) {
-        setGettingLocation(false);
-        setError("Location request timed out. Please try again or search for a location manually.");
+        setError("Location permission request is taking too long. Please check if you've blocked location access for this site.");
       }
-    }, 10000);
+    }, 3000);
+    
+    const locationTimeout = setTimeout(() => {
+      if (gettingLocation) {
+        setError("Location request timed out after 15 seconds. Please try again or search manually.");
+        setGettingLocation(false);
+        locationRequestRef.current = false;
+      }
+    }, 15000);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        clearTimeout(timeoutId);
+        clearTimeout(permissionTimeout);
+        clearTimeout(locationTimeout);
+        
         try {
           const { latitude, longitude } = position.coords;
+          console.log("Got coordinates:", latitude, longitude);
           
-          // Use a timeout for the reverse geocoding request
-          const controller = new AbortController();
-          const geocodeTimeout = setTimeout(() => controller.abort(), 8000);
+          // Try to get address, but don't wait too long
+          let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
           
           try {
+            // Use a shorter timeout for the reverse geocoding
+            const controller = new AbortController();
+            const geocodeTimeout = setTimeout(() => controller.abort(), 5000);
+            
             const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18`,
               { signal: controller.signal }
             );
             clearTimeout(geocodeTimeout);
             
-            if (!response.ok) {
-              throw new Error(`HTTP ${response.status}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.display_name) {
+                address = data.display_name.length > 100 
+                  ? data.display_name.substring(0, 100) + "..."
+                  : data.display_name;
+              }
             }
-            
-            const data = await response.json();
-            
-            // Extract a readable address
-            let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            if (data.display_name) {
-              // Truncate if too long
-              address = data.display_name.length > 100 
-                ? data.display_name.substring(0, 100) + "..."
-                : data.display_name;
-            } else if (data.address) {
-              const addr = data.address;
-              address = [addr.road, addr.suburb, addr.city, addr.state]
-                .filter(Boolean)
-                .join(", ") || address;
-            }
-            
-            setFormData(prev => ({
-              ...prev,
-              location: address,
-              latitude: latitude.toString(),
-              longitude: longitude.toString(),
-            }));
-            setMapSelected(true);
-            setZoomToLocation({ lat: latitude, lng: longitude, address });
-            setError(null);
-          } catch (fetchError) {
-            console.error("Error fetching location details:", fetchError);
-            // Still set the coordinates even if reverse geocoding fails
-            setFormData(prev => ({
-              ...prev,
-              location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)} (Current Location)`,
-              latitude: latitude.toString(),
-              longitude: longitude.toString(),
-            }));
-            setMapSelected(true);
-            setZoomToLocation({ lat: latitude, lng: longitude, address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` });
-            setError("Location set with coordinates only. You can edit the address if needed.");
+          } catch (geocodeError) {
+            console.warn("Reverse geocoding failed, using coordinates only:", geocodeError);
+            // Keep using coordinates as address
           }
+          
+          setFormData(prev => ({
+            ...prev,
+            location: address,
+            latitude: latitude.toString(),
+            longitude: longitude.toString(),
+          }));
+          setMapSelected(true);
+          setZoomToLocation({ lat: latitude, lng: longitude, address });
+          setError(null);
+          
         } catch (err) {
           console.error("Error processing location:", err);
           setError("Failed to get location details. Please search for your location manually.");
         } finally {
           setGettingLocation(false);
+          locationRequestRef.current = false;
         }
       },
       (error) => {
-        clearTimeout(timeoutId);
+        clearTimeout(permissionTimeout);
+        clearTimeout(locationTimeout);
         console.error("Geolocation error:", error);
         setGettingLocation(false);
+        locationRequestRef.current = false;
         
-        let errorMessage = "Failed to get your location. ";
+        let errorMessage = "";
         switch(error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage += "Please allow location access in your browser settings.";
+            errorMessage = "Location access denied. Please enable location access in your browser settings, then click 'Use my current location' again. Or search for a location manually.";
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage += "Location information is unavailable. Please search manually.";
+            errorMessage = "Location information unavailable. Please search for your location manually.";
             break;
           case error.TIMEOUT:
-            errorMessage += "Location request timed out. Please try again.";
+            errorMessage = "Location request timed out. Please check your internet connection and try again, or search manually.";
             break;
           default:
-            errorMessage += "Please search for your location manually.";
+            errorMessage = "Failed to get your location. Please search for your location manually.";
         }
         setError(errorMessage);
+      },
+      {
+        enableHighAccuracy: false, // Set to false for faster response
+        timeout: 10000, // 10 seconds timeout
+        maximumAge: 60000 // Accept cached location up to 1 minute old
       }
     );
   };
@@ -388,7 +404,6 @@ export default function HostPropertyPage() {
     });
   };
 
-  // Add to wishlist function
   const addToWishlist = async (propertyId: string) => {
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("berenda_token");
@@ -436,7 +451,6 @@ export default function HostPropertyPage() {
         await uploadPropertyImages(propertyId, imageFiles);
       }
 
-      // Ask user if they want to add to wishlist
       const addToWishlistConfirm = window.confirm(
         "Property listed successfully! Would you like to add it to your wishlist?"
       );
@@ -682,7 +696,7 @@ export default function HostPropertyPage() {
               </div>
 
               {/* Use Current Location Button - FIXED */}
-              <div className="flex justify-center">
+              <div className="flex flex-col items-center gap-3">
                 <button
                   type="button"
                   onClick={getCurrentLocation}
@@ -695,6 +709,13 @@ export default function HostPropertyPage() {
                   </svg>
                   {gettingLocation ? t("host.gettingLocation") : t("host.useMyLocation")}
                 </button>
+                
+                {/* Help text for location permission */}
+                {gettingLocation && (
+                  <p className="text-xs text-gray-500 text-center">
+                    If location is stuck, check your browser's address bar for a location permission popup.
+                  </p>
+                )}
               </div>
 
               {/* Location Input */}
