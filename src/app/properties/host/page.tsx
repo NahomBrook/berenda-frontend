@@ -8,10 +8,10 @@ import { createProperty, uploadPropertyImages } from "@/utils/api";
 import DragDropImageUpload from "@/components/DragDropImageUpload";
 import { useLanguage } from "@/context/LanguageContext";
 
-// Dynamically import map components with no SSR - USING THE WORKING PropertyMapLoader
+// Dynamically import map components with no SSR
 const MapWithNoSSR = dynamic(
-  () => import("@/components/PropertyMapLoader"),
-  { 
+  () => import("@/components/PropertyMapPicker"),
+  {
     ssr: false,
     loading: () => (
       <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -224,11 +224,15 @@ export default function HostPropertyPage() {
         setGettingLocation(false);
       },
       (error) => {
-        console.error("Geolocation error:", error);
+        console.error("Geolocation error:", error.code, error.message);
         setGettingLocation(false);
-        
+
         if (error.code === 1) {
-          setError("Location access denied. Please use the search bar to find your location.");
+          setError("Location access denied. Please allow location access in your browser settings, or use the search bar above.");
+        } else if (error.code === 2) {
+          setError("Your location could not be determined. This may require HTTPS. Please use the search bar above.");
+        } else if (error.code === 3) {
+          setError("Location request timed out. Please try again or use the search bar above.");
         } else {
           setError("Unable to get your location. Please use the search bar above.");
         }

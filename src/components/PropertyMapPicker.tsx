@@ -169,9 +169,8 @@ function MapEventsHandler({ onLocationSelect }: { onLocationSelect: PropertyMapP
 
 export default function PropertyMapPicker({ onLocationSelect, zoomToLocation }: PropertyMapPickerProps) {
   const [isMounted, setIsMounted] = useState(false);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([9.0320, 38.7469]); // Addis Ababa center
-  const [mapZoom, setMapZoom] = useState(13);
   const [markerPos, setMarkerPos] = useState<[number, number] | null>(null);
+  const mapRef = useRef<any>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -179,11 +178,10 @@ export default function PropertyMapPicker({ onLocationSelect, zoomToLocation }: 
 
   useEffect(() => {
     if (zoomToLocation && zoomToLocation.lat && zoomToLocation.lng) {
-      console.log("Zooming to location:", zoomToLocation);
-      setMapCenter([zoomToLocation.lat, zoomToLocation.lng]);
-      setMapZoom(16);
       setMarkerPos([zoomToLocation.lat, zoomToLocation.lng]);
-      
+      if (mapRef.current) {
+        mapRef.current.setView([zoomToLocation.lat, zoomToLocation.lng], 16);
+      }
       if (zoomToLocation.address) {
         onLocationSelect(zoomToLocation.lat, zoomToLocation.lng, zoomToLocation.address);
       }
@@ -200,13 +198,11 @@ export default function PropertyMapPicker({ onLocationSelect, zoomToLocation }: 
 
   return (
     <MapContainer
-      center={mapCenter}
-      zoom={mapZoom}
+      center={[9.0320, 38.7469]}
+      zoom={13}
       style={{ height: "100%", width: "100%" }}
       scrollWheelZoom={true}
-      whenReady={() => {
-        console.log("Map ready");
-      }}
+      ref={mapRef}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
