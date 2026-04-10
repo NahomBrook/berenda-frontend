@@ -117,7 +117,7 @@ export default function HostPropertyPage() {
   // Check authentication
   useEffect(() => {
     if (!isMounted) return;
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token") || localStorage.getItem("berenda_token");
     if (!token) {
       router.push("/auth/login");
     } else {
@@ -183,116 +183,125 @@ export default function HostPropertyPage() {
     setZoomToLocation({ lat: area.lat, lng: area.lng, address });
   };
 
-  // IP-based location fallback
-  const getLocationByIP = async () => {
-    if (gettingLocation) return;
-    
-    setGettingLocation(true);
-    setError(null);
-    
-    try {
-      const response = await fetch('https://ipapi.co/json/');
-      const data = await response.json();
-      
-      if (data.latitude && data.longitude) {
-        const address = `${data.city}, ${data.region}, ${data.country_name}`;
-        setFormData(prev => ({
-          ...prev,
-          latitude: data.latitude.toString(),
-          longitude: data.longitude.toString(),
-          location: address,
-        }));
-        setMapSelected(true);
-        setZoomToLocation({ 
-          lat: data.latitude, 
-          lng: data.longitude, 
-          address: address 
-        });
-        setError(null);
-      } else {
-        throw new Error("No location data");
-      }
-    } catch (err) {
-      console.error("IP geolocation failed:", err);
-      setError("Could not detect location. Please use the search bar or click on the map.");
-    } finally {
-      setGettingLocation(false);
-    }
-  };
-
-  // Browser geolocation
+  // FIXED: Completely rewritten getCurrentLocation with better error handling
   const getCurrentLocation = () => {
-    if (gettingLocation) return;
+    // Prevent multiple simultaneous requests
+    if (locationRequestRef.current || gettingLocation) {
+      console.log("Location request already in progress");
+      return;
+    }
     
+    locationRequestRef.current = true;
     setGettingLocation(true);
     setError(null);
     
+    // Check if geolocation is supported
     if (!navigator.geolocation) {
-      setError("Your browser doesn't support geolocation. Please use the search bar or click on the map.");
+      setError("Geolocation is not supported by your browser. Please search for a location or select from the map.");
       setGettingLocation(false);
+      locationRequestRef.current = false;
       return;
     }
 
-    const timeoutId = setTimeout(() => {
-      setGettingLocation(false);
-      setError("Location request timed out. Try using 'Approximate Location' or search manually.");
-    }, 10000);
+    // Show a helpful message about browser permissions
+    console.log("Requesting location... Make sure browser location access is allowed");
+    
+    // Set multiple timeouts for different stages
+    const permissionTimeout = setTimeout(() => {
+      if (gettingLocation) {
+        setError("Location permission request is taking too long. Please check if you've blocked location access for this site.");
+      }
+    }, 3000);
+    
+    const locationTimeout = setTimeout(() => {
+      if (gettingLocation) {
+        setError("Location request timed out after 15 seconds. Please try again or search manually.");
+        setGettingLocation(false);
+        locationRequestRef.current = false;
+      }
+    }, 15000);
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        clearTimeout(timeoutId);
+      async (position) => {
+        clearTimeout(permissionTimeout);
+        clearTimeout(locationTimeout);
         
-        const { latitude, longitude } = position.coords;
-        
-        setFormData(prev => ({
-          ...prev,
-          latitude: latitude.toString(),
-          longitude: longitude.toString(),
-          location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-        }));
-        setMapSelected(true);
-        
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18`)
-          .then(res => res.json())
-          .then(data => {
-            const address = data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            setFormData(prev => ({
-              ...prev,
-              location: address.length > 100 ? address.substring(0, 100) + "..." : address,
-            }));
-            setZoomToLocation({ lat: latitude, lng: longitude, address });
-          })
-          .catch(() => {
-            setZoomToLocation({ lat: latitude, lng: longitude, address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` });
-          });
-        
-        setGettingLocation(false);
+        try {
+          const { latitude, longitude } = position.coords;
+          console.log("Got coordinates:", latitude, longitude);
+          
+          // Try to get address, but don't wait too long
+          let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+          
+          try {
+            // Use a shorter timeout for the reverse geocoding
+            const controller = new AbortController();
+            const geocodeTimeout = setTimeout(() => controller.abort(), 5000);
+            
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18`,
+              { signal: controller.signal }
+            );
+            clearTimeout(geocodeTimeout);
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data.display_name) {
+                address = data.display_name.length > 100 
+                  ? data.display_name.substring(0, 100) + "..."
+                  : data.display_name;
+              }
+            }
+          } catch (geocodeError) {
+            console.warn("Reverse geocoding failed, using coordinates only:", geocodeError);
+            // Keep using coordinates as address
+          }
+          
+          setFormData(prev => ({
+            ...prev,
+            location: address,
+            latitude: latitude.toString(),
+            longitude: longitude.toString(),
+          }));
+          setMapSelected(true);
+          setZoomToLocation({ lat: latitude, lng: longitude, address });
+          setError(null);
+          
+        } catch (err) {
+          console.error("Error processing location:", err);
+          setError("Failed to get location details. Please search for your location manually.");
+        } finally {
+          setGettingLocation(false);
+          locationRequestRef.current = false;
+        }
       },
       (error) => {
-        clearTimeout(timeoutId);
+        clearTimeout(permissionTimeout);
+        clearTimeout(locationTimeout);
         console.error("Geolocation error:", error);
+        setGettingLocation(false);
+        locationRequestRef.current = false;
         
         let errorMessage = "";
         switch(error.code) {
-          case 1:
-            errorMessage = "Location access denied. Please allow location access in your browser settings.";
+          case error.PERMISSION_DENIED:
+            errorMessage = "Location access denied. Please enable location access in your browser settings, then click 'Use my current location' again. Or search for a location manually.";
             break;
-          case 2:
-            errorMessage = "Location unavailable. Please use the search bar.";
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location information unavailable. Please search for your location manually.";
             break;
-          case 3:
-            errorMessage = "Location request timed out. Try 'Approximate Location' or search manually.";
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out. Please check your internet connection and try again, or search manually.";
             break;
           default:
-            errorMessage = "Failed to get location. Please use the search bar.";
+            errorMessage = "Failed to get your location. Please search for your location manually.";
         }
         setError(errorMessage);
-        setGettingLocation(false);
       },
       {
-        enableHighAccuracy: false,
-        timeout: 8000,
-        maximumAge: 60000
+        enableHighAccuracy: false, // Set to false for faster response
+        timeout: 10000, // 10 seconds timeout
+        maximumAge: 60000 // Accept cached location up to 1 minute old
       }
     );
   };
@@ -397,7 +406,7 @@ export default function HostPropertyPage() {
 
   const addToWishlist = async (propertyId: string) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token") || localStorage.getItem("berenda_token");
       if (!token) return false;
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/favorites`, {
@@ -419,14 +428,6 @@ export default function HostPropertyPage() {
 
   const handleSubmit = async () => {
     setError(null);
-    
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("You need to login again. Redirecting...");
-      setTimeout(() => router.push("/auth/login"), 2000);
-      return;
-    }
-    
     setLoading(true);
 
     try {
@@ -463,13 +464,7 @@ export default function HostPropertyPage() {
       
     } catch (err: any) {
       console.error("Error creating property:", err);
-      if (err.message?.includes("token") || err.message?.includes("unauthorized") || err.status === 401) {
-        setError("Your session has expired. Please login again.");
-        localStorage.removeItem("token");
-        setTimeout(() => router.push("/auth/login"), 2000);
-      } else {
-        setError(err.message || "Failed to create property. Please try again.");
-      }
+      setError(err.message || "Failed to create property. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -652,7 +647,7 @@ export default function HostPropertyPage() {
               {/* Quick Area Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quick Select Area in Addis Ababa
+                  {t("host.quickSelect")}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {ADDIS_ABABA_AREAS.map((area) => (
@@ -671,13 +666,13 @@ export default function HostPropertyPage() {
               {/* Search Location */}
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Search for a specific location
+                  {t("host.searchLocation")}
                 </label>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search for a place, landmark, or address..."
+                  placeholder={t("host.searchPlaceholder")}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
                 {showSearchResults && searchResults.length > 0 && (
@@ -700,38 +695,33 @@ export default function HostPropertyPage() {
                 )}
               </div>
 
-              {/* Location Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {/* Use Current Location Button - FIXED */}
+              <div className="flex flex-col items-center gap-3">
                 <button
                   type="button"
                   onClick={getCurrentLocation}
                   disabled={gettingLocation}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition disabled:opacity-50"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  {gettingLocation ? "Getting location..." : "Use my current location"}
+                  {gettingLocation ? t("host.gettingLocation") : t("host.useMyLocation")}
                 </button>
                 
-                <button
-                  type="button"
-                  onClick={getLocationByIP}
-                  disabled={gettingLocation}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition disabled:opacity-50"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4-3-9s1.34-9 3-9" />
-                  </svg>
-                  Use approximate location (IP)
-                </button>
+                {/* Help text for location permission */}
+                {gettingLocation && (
+                  <p className="text-xs text-gray-500 text-center">
+                    If location is stuck, check your browser's address bar for a location permission popup.
+                  </p>
+                )}
               </div>
 
               {/* Location Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Address/Location <span className="text-red-500">*</span>
+                  {t("host.address")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -739,7 +729,7 @@ export default function HostPropertyPage() {
                   value={formData.location}
                   onChange={handleInputChange}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  placeholder="Address will appear when you select a location"
+                  placeholder={t("host.field.addressPlaceholder")}
                   readOnly
                 />
               </div>
@@ -747,7 +737,7 @@ export default function HostPropertyPage() {
               {/* Map */}
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Click on the map to set exact location <span className="text-red-500">*</span>
+                  {t("host.mapClick")} <span className="text-red-500">*</span>
                 </label>
                 <div className={`h-96 rounded-lg overflow-hidden border-2 ${!mapSelected ? 'border-red-500' : 'border-gray-300'}`}>
                   <MapWithNoSSR 
@@ -764,15 +754,13 @@ export default function HostPropertyPage() {
                     className="w-4 h-4 text-red-600"
                   />
                   <label className="text-sm text-gray-600">
-                    {mapSelected 
-                      ? "✓ Location selected! You can proceed." 
-                      : "⚠️ Required: Select a location from the map, search, or use location buttons above"}
+                    {mapSelected ? t("host.locationSelected") : t("host.locationRequired")}
                   </label>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 mt-3">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Latitude</label>
+                    <label className="block text-xs text-gray-500 mb-1">{t("host.latitude")}</label>
                     <input
                       type="text"
                       value={formData.latitude}
@@ -781,7 +769,7 @@ export default function HostPropertyPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Longitude</label>
+                    <label className="block text-xs text-gray-500 mb-1">{t("host.longitude")}</label>
                     <input
                       type="text"
                       value={formData.longitude}
@@ -862,61 +850,69 @@ export default function HostPropertyPage() {
             </div>
           )}
 
-          {/* Step 5: Review */}
+          {/* Step 5: Review - Compact List View */}
           {currentStep === HostingStep.REVIEW && (
             <div className="space-y-6">
               <h2 className="text-xl font-light text-gray-900 mb-4">{t("host.review.title")}</h2>
               
               <div className="bg-gray-50 rounded-xl p-6">
                 <div className="space-y-3">
+                  {/* Title */}
                   <div className="flex items-baseline gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">Title:</span>
-                    <span className="text-gray-900 font-medium">{formData.title || "Untitled Property"}</span>
+                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.titleLabel")}</span>
+                    <span className="text-gray-900 font-medium">{formData.title || t("host.notSet")}</span>
                   </div>
                   
+                  {/* Location */}
                   <div className="flex items-baseline gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">Location:</span>
-                    <span className="text-gray-700">{formData.location || "Not set"}</span>
+                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.location")}</span>
+                    <span className="text-gray-700">{formData.location || t("host.notSet")}</span>
                   </div>
                   
+                  {/* Monthly Price */}
                   <div className="flex items-baseline gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">Monthly Price:</span>
+                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.price")}</span>
                     <span className="text-red-600 font-semibold">ETB {formData.monthlyPrice || "0"}</span>
                   </div>
                   
+                  {/* Bedrooms */}
                   {formData.bedrooms && (
                     <div className="flex items-baseline gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">Bedrooms:</span>
+                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.bedrooms")}</span>
                       <span className="text-gray-700">{formData.bedrooms}</span>
                     </div>
                   )}
                   
+                  {/* Bathrooms */}
                   {formData.bathrooms && (
                     <div className="flex items-baseline gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">Bathrooms:</span>
+                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.bathrooms")}</span>
                       <span className="text-gray-700">{formData.bathrooms}</span>
                     </div>
                   )}
                   
+                  {/* Area */}
                   {formData.area && (
                     <div className="flex items-baseline gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">Area:</span>
-                      <span className="text-gray-700">{formData.area} m²</span>
+                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.area")}</span>
+                      <span className="text-gray-700">{formData.area} {t("host.areaSuffix")}</span>
                     </div>
                   )}
                   
+                  {/* Coordinates */}
                   <div className="flex items-baseline gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">Coordinates:</span>
+                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.coordinates")}</span>
                     <span className="text-gray-600 font-mono text-sm">
-                      {formData.latitude && formData.longitude 
+                      {formData.latitude && formData.longitude
                         ? `${parseFloat(formData.latitude).toFixed(6)}, ${parseFloat(formData.longitude).toFixed(6)}`
-                        : "Not selected"}
+                        : t("host.notSelected")}
                     </span>
                   </div>
                   
+                  {/* Amenities */}
                   {formData.amenities.length > 0 && (
                     <div className="flex gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">Amenities:</span>
+                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.amenities")}</span>
                       <div className="flex flex-wrap gap-1">
                         {formData.amenities.map((a) => (
                           <span key={a} className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-xs">
@@ -927,24 +923,23 @@ export default function HostPropertyPage() {
                     </div>
                   )}
                   
+                  {/* Images */}
                   <div className="flex gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">Images:</span>
-                    <span className="text-gray-700">{imageFiles.length} {imageFiles.length === 1 ? 'image' : 'images'} uploaded</span>
+                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.images")}</span>
+                    <span className="text-gray-700">{imageFiles.length} {imageFiles.length === 1 ? t("host.image") : t("host.images")} {t("host.photos.uploaded")}</span>
                   </div>
                   
+                  {/* Description */}
                   {formData.description && (
                     <div className="flex gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">Description:</span>
+                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.description")}</span>
                       <p className="text-gray-700 text-sm flex-1">{formData.description}</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              <p className="text-sm text-gray-500">
-                By clicking "List Property", you agree that your property will be listed on our platform 
-                and subject to our terms and conditions.
-              </p>
+              <p className="text-sm text-gray-500">{t("host.review.terms")}</p>
             </div>
           )}
 
