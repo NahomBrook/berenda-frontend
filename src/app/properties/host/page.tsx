@@ -8,9 +8,9 @@ import { createProperty, uploadPropertyImages } from "@/utils/api";
 import DragDropImageUpload from "@/components/DragDropImageUpload";
 import { useLanguage } from "@/context/LanguageContext";
 
-// Dynamically import map components with no SSR
+// Dynamically import map components with no SSR - USING THE WORKING PropertyMapLoader
 const MapWithNoSSR = dynamic(
-  () => import("@/components/PropertyMapPicker"),
+  () => import("@/components/PropertyMapLoader"),
   { 
     ssr: false,
     loading: () => (
@@ -106,10 +106,6 @@ export default function HostPropertyPage() {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
-  // Ref to track if location request is active
-  const locationRequestRef = useRef<boolean>(false);
-  const watchIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -118,7 +114,7 @@ export default function HostPropertyPage() {
   // Check authentication
   useEffect(() => {
     if (!isMounted) return;
-    const token = localStorage.getItem("token") || localStorage.getItem("berenda_token");
+    const token = localStorage.getItem("berenda_token");
     if (!token) {
       router.push("/auth/login");
     } else {
@@ -135,7 +131,7 @@ export default function HostPropertyPage() {
     }
 
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Addis Ababa, Ethiopia")}&limit=5`);
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Addis Ababa, Ethiopia")}&limit=10`);
       const data = await response.json();
       setSearchResults(data);
       setShowSearchResults(true);
@@ -151,7 +147,7 @@ export default function HostPropertyPage() {
       if (searchQuery) {
         searchLocations(searchQuery);
       }
-    }, 500);
+    }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery, searchLocations, isMounted]);
 
@@ -184,60 +180,23 @@ export default function HostPropertyPage() {
     setZoomToLocation({ lat: area.lat, lng: area.lng, address });
   };
 
-  // FIXED: Optimized getCurrentLocation with better timeout handling
+  // Simplified geolocation
   const getCurrentLocation = () => {
-    // Prevent multiple simultaneous requests
-    if (locationRequestRef.current || gettingLocation) {
-      console.log("Location request already in progress");
-      return;
-    }
+    if (gettingLocation) return;
     
-    locationRequestRef.current = true;
     setGettingLocation(true);
     setError(null);
     
-    // Check if geolocation is supported
     if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser. Please search for a location or select from the map.");
+      setError("Geolocation is not supported. Please use the search bar to find your location.");
       setGettingLocation(false);
-      locationRequestRef.current = false;
       return;
     }
 
-    console.log("Requesting location with optimized settings...");
-    
-    // Clear any existing watch
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
-    
-    // Set a timeout for the entire operation (30 seconds - longer for better chance)
-    const locationTimeout = setTimeout(() => {
-      if (gettingLocation) {
-        console.error("Location request timed out after 30 seconds");
-        setError("Location request taking too long. Please try again or use the search bar.");
-        setGettingLocation(false);
-        locationRequestRef.current = false;
-      }
-    }, 30000);
-
-    // Use watchPosition instead of getCurrentPosition for better success rate
-    watchIdRef.current = navigator.geolocation.watchPosition(
+    navigator.geolocation.getCurrentPosition(
       (position) => {
-        // Clear timeout on success
-        clearTimeout(locationTimeout);
+        const { latitude, longitude } = position.coords;
         
-        const { latitude, longitude, accuracy } = position.coords;
-        console.log("Got coordinates:", { latitude, longitude, accuracy });
-        
-        // Stop watching after successful get
-        if (watchIdRef.current !== null) {
-          navigator.geolocation.clearWatch(watchIdRef.current);
-          watchIdRef.current = null;
-        }
-        
-        // Set coordinates immediately
         setFormData(prev => ({
           ...prev,
           latitude: latitude.toString(),
@@ -246,64 +205,38 @@ export default function HostPropertyPage() {
         }));
         setMapSelected(true);
         
-        // Try to get address in background (don't block UI)
+        // Try to get address
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18`)
           .then(res => res.json())
           .then(data => {
             if (data.display_name) {
-              const address = data.display_name.length > 100 
-                ? data.display_name.substring(0, 100) + "..."
-                : data.display_name;
               setFormData(prev => ({
                 ...prev,
-                location: address,
+                location: data.display_name,
               }));
-              setZoomToLocation({ lat: latitude, lng: longitude, address });
-            } else {
-              setZoomToLocation({ lat: latitude, lng: longitude, address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` });
+              setZoomToLocation({ lat: latitude, lng: longitude, address: data.display_name });
             }
           })
           .catch(() => {
             setZoomToLocation({ lat: latitude, lng: longitude, address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` });
           });
         
-        setError(null);
         setGettingLocation(false);
-        locationRequestRef.current = false;
       },
       (error) => {
-        clearTimeout(locationTimeout);
-        console.error("Geolocation error:", error.code, error.message);
-        
-        // Clear watch on error
-        if (watchIdRef.current !== null) {
-          navigator.geolocation.clearWatch(watchIdRef.current);
-          watchIdRef.current = null;
-        }
-        
+        console.error("Geolocation error:", error);
         setGettingLocation(false);
-        locationRequestRef.current = false;
         
-        let errorMessage = "";
-        switch(error.code) {
-          case 1: // PERMISSION_DENIED
-            errorMessage = "Location access denied. Please allow location access in your browser settings, then refresh and try again.";
-            break;
-          case 2: // POSITION_UNAVAILABLE
-            errorMessage = "Location information unavailable. Please search for your location manually or select from the map.";
-            break;
-          case 3: // TIMEOUT
-            errorMessage = "Location request timed out. Please try again or use the search bar to find your location.";
-            break;
-          default:
-            errorMessage = "Failed to get your location. Please search manually or click on the map.";
+        if (error.code === 1) {
+          setError("Location access denied. Please use the search bar to find your location.");
+        } else {
+          setError("Unable to get your location. Please use the search bar above.");
         }
-        setError(errorMessage);
       },
       {
-        enableHighAccuracy: true, // Changed to true for better accuracy
-        timeout: 20000, // 20 second timeout
-        maximumAge: 0, // Don't use cached position
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 60000
       }
     );
   };
@@ -350,11 +283,11 @@ export default function HostPropertyPage() {
       return false;
     }
     if (!formData.latitude || !formData.longitude) {
-      setError("Please select a location on the map");
+      setError("Please select a location from the search results or click on the map");
       return false;
     }
     if (!mapSelected) {
-      setError("Please click on the map to confirm your property location");
+      setError("Please confirm your property location on the map");
       return false;
     }
     return true;
@@ -408,7 +341,7 @@ export default function HostPropertyPage() {
 
   const addToWishlist = async (propertyId: string) => {
     try {
-      const token = localStorage.getItem("token") || localStorage.getItem("berenda_token");
+      const token = localStorage.getItem("berenda_token");
       if (!token) return false;
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/favorites`, {
@@ -642,14 +575,48 @@ export default function HostPropertyPage() {
           {/* Step 2: Location with Map */}
           {currentStep === HostingStep.LOCATION && (
             <div className="space-y-6">
-              <div className="flex justify-between items-center mb-4">
+              <div className="mb-4">
                 <h2 className="text-xl font-light text-gray-900">{t("host.step.location")}</h2>
+                <p className="text-sm text-gray-500 mt-1">Search for your location or click on the map</p>
+              </div>
+
+              {/* Search Location - PRIMARY METHOD */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Search for your address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="e.g., Bole, Addis Ababa or specific street name..."
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  autoComplete="off"
+                />
+                {showSearchResults && searchResults.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {searchResults.map((result, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleLocationSelect(
+                          parseFloat(result.lat),
+                          parseFloat(result.lon),
+                          result.display_name
+                        )}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors border-b last:border-b-0"
+                      >
+                        <p className="text-sm text-gray-800">{result.display_name}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Quick Area Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t("host.quickSelect")}
+                  Or select a neighborhood
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {ADDIS_ABABA_AREAS.map((area) => (
@@ -665,72 +632,34 @@ export default function HostPropertyPage() {
                 </div>
               </div>
 
-              {/* Search Location */}
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t("host.searchLocation")}
-                </label>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t("host.searchPlaceholder")}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
-                {showSearchResults && searchResults.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {searchResults.map((result, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handleLocationSelect(
-                          parseFloat(result.lat),
-                          parseFloat(result.lon),
-                          result.display_name
-                        )}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors"
-                      >
-                        <p className="text-sm text-gray-800">{result.display_name}</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Use Current Location Button - FIXED with better settings */}
-              <div className="flex flex-col items-center gap-3">
+              {/* Current Location Button - Optional */}
+              <div className="flex justify-center pt-2">
                 <button
                   type="button"
                   onClick={getCurrentLocation}
                   disabled={gettingLocation}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 text-gray-500 text-sm hover:text-blue-600 transition disabled:opacity-50"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  {gettingLocation ? t("host.gettingLocation") : t("host.useMyLocation")}
+                  {gettingLocation ? "Detecting location..." : "Use my current location (if available)"}
                 </button>
-                
-                {gettingLocation && (
-                  <p className="text-xs text-gray-500 text-center">
-                    Getting your location... This may take up to 30 seconds.
-                  </p>
-                )}
               </div>
 
-              {/* Location Input */}
+              {/* Location Input - Readonly, shows selected location */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t("host.address")} <span className="text-red-500">*</span>
+                  Selected Address <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="location"
                   value={formData.location}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  placeholder={t("host.field.addressPlaceholder")}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2 bg-gray-50"
+                  placeholder="Select a location from search above"
                   readOnly
                 />
               </div>
@@ -738,9 +667,9 @@ export default function HostPropertyPage() {
               {/* Map */}
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t("host.mapClick")} <span className="text-red-500">*</span>
+                  Or click on the map to set exact location
                 </label>
-                <div className={`h-96 rounded-lg overflow-hidden border-2 ${!mapSelected ? 'border-red-500' : 'border-gray-300'}`}>
+                <div className={`h-96 rounded-lg overflow-hidden border-2 ${!mapSelected ? 'border-gray-300' : 'border-green-500'}`}>
                   <MapWithNoSSR 
                     onLocationSelect={handleLocationSelect} 
                     zoomToLocation={zoomToLocation}
@@ -752,16 +681,18 @@ export default function HostPropertyPage() {
                     type="checkbox"
                     checked={mapSelected}
                     readOnly
-                    className="w-4 h-4 text-red-600"
+                    className="w-4 h-4 text-green-600"
                   />
                   <label className="text-sm text-gray-600">
-                    {mapSelected ? t("host.locationSelected") : t("host.locationRequired")}
+                    {mapSelected 
+                      ? "✓ Location confirmed! You can proceed." 
+                      : "Select a location from search above or click on the map"}
                   </label>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 mt-3">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">{t("host.latitude")}</label>
+                    <label className="block text-xs text-gray-500 mb-1">Latitude</label>
                     <input
                       type="text"
                       value={formData.latitude}
@@ -770,7 +701,7 @@ export default function HostPropertyPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">{t("host.longitude")}</label>
+                    <label className="block text-xs text-gray-500 mb-1">Longitude</label>
                     <input
                       type="text"
                       value={formData.longitude}
@@ -851,69 +782,61 @@ export default function HostPropertyPage() {
             </div>
           )}
 
-          {/* Step 5: Review - Compact List View */}
+          {/* Step 5: Review */}
           {currentStep === HostingStep.REVIEW && (
             <div className="space-y-6">
               <h2 className="text-xl font-light text-gray-900 mb-4">{t("host.review.title")}</h2>
               
               <div className="bg-gray-50 rounded-xl p-6">
                 <div className="space-y-3">
-                  {/* Title */}
                   <div className="flex items-baseline gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.titleLabel")}</span>
-                    <span className="text-gray-900 font-medium">{formData.title || t("host.notSet")}</span>
+                    <span className="text-gray-500 w-28 shrink-0">Title:</span>
+                    <span className="text-gray-900 font-medium">{formData.title || "Untitled Property"}</span>
                   </div>
                   
-                  {/* Location */}
                   <div className="flex items-baseline gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.location")}</span>
-                    <span className="text-gray-700">{formData.location || t("host.notSet")}</span>
+                    <span className="text-gray-500 w-28 shrink-0">Location:</span>
+                    <span className="text-gray-700">{formData.location || "Not set"}</span>
                   </div>
                   
-                  {/* Monthly Price */}
                   <div className="flex items-baseline gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.price")}</span>
+                    <span className="text-gray-500 w-28 shrink-0">Monthly Price:</span>
                     <span className="text-red-600 font-semibold">ETB {formData.monthlyPrice || "0"}</span>
                   </div>
                   
-                  {/* Bedrooms */}
                   {formData.bedrooms && (
                     <div className="flex items-baseline gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.bedrooms")}</span>
+                      <span className="text-gray-500 w-28 shrink-0">Bedrooms:</span>
                       <span className="text-gray-700">{formData.bedrooms}</span>
                     </div>
                   )}
                   
-                  {/* Bathrooms */}
                   {formData.bathrooms && (
                     <div className="flex items-baseline gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.bathrooms")}</span>
+                      <span className="text-gray-500 w-28 shrink-0">Bathrooms:</span>
                       <span className="text-gray-700">{formData.bathrooms}</span>
                     </div>
                   )}
                   
-                  {/* Area */}
                   {formData.area && (
                     <div className="flex items-baseline gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.area")}</span>
-                      <span className="text-gray-700">{formData.area} {t("host.areaSuffix")}</span>
+                      <span className="text-gray-500 w-28 shrink-0">Area:</span>
+                      <span className="text-gray-700">{formData.area} m²</span>
                     </div>
                   )}
                   
-                  {/* Coordinates */}
                   <div className="flex items-baseline gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.coordinates")}</span>
+                    <span className="text-gray-500 w-28 shrink-0">Coordinates:</span>
                     <span className="text-gray-600 font-mono text-sm">
-                      {formData.latitude && formData.longitude
+                      {formData.latitude && formData.longitude 
                         ? `${parseFloat(formData.latitude).toFixed(6)}, ${parseFloat(formData.longitude).toFixed(6)}`
-                        : t("host.notSelected")}
+                        : "Not selected"}
                     </span>
                   </div>
                   
-                  {/* Amenities */}
                   {formData.amenities.length > 0 && (
                     <div className="flex gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.amenities")}</span>
+                      <span className="text-gray-500 w-28 shrink-0">Amenities:</span>
                       <div className="flex flex-wrap gap-1">
                         {formData.amenities.map((a) => (
                           <span key={a} className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-xs">
@@ -924,23 +847,24 @@ export default function HostPropertyPage() {
                     </div>
                   )}
                   
-                  {/* Images */}
                   <div className="flex gap-4">
-                    <span className="text-gray-500 w-28 shrink-0">{t("host.review.images")}</span>
-                    <span className="text-gray-700">{imageFiles.length} {imageFiles.length === 1 ? t("host.image") : t("host.images")} {t("host.photos.uploaded")}</span>
+                    <span className="text-gray-500 w-28 shrink-0">Images:</span>
+                    <span className="text-gray-700">{imageFiles.length} {imageFiles.length === 1 ? 'image' : 'images'} uploaded</span>
                   </div>
                   
-                  {/* Description */}
                   {formData.description && (
                     <div className="flex gap-4">
-                      <span className="text-gray-500 w-28 shrink-0">{t("host.review.description")}</span>
+                      <span className="text-gray-500 w-28 shrink-0">Description:</span>
                       <p className="text-gray-700 text-sm flex-1">{formData.description}</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              <p className="text-sm text-gray-500">{t("host.review.terms")}</p>
+              <p className="text-sm text-gray-500">
+                By clicking "List Property", you agree that your property will be listed on our platform 
+                and subject to our terms and conditions.
+              </p>
             </div>
           )}
 
