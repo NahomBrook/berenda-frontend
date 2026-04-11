@@ -23,7 +23,7 @@ import {
   Globe,
   Lock,
 } from "lucide-react";
-import { getProfile, updateProfile, getUserBookings, getFavorites, getUserProperties, updateUserSettings, getSettings } from "../../utils/profileApi";
+import { getProfile, updateProfile, getUserBookings, getFavorites, getUserProperties, updateUserSettings, getSettings, getHostBookings, updateBookingStatus } from "../../utils/profileApi";
 import Navbar from "@/components/layout/Navbar";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -35,6 +35,7 @@ interface Tab {
 
 interface Booking {
   id: string;
+  propertyId: string;
   propertyTitle: string;
   propertyLocation: string;
   checkIn: string;
@@ -94,6 +95,7 @@ export default function ProfileDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [hostedProperties, setHostedProperties] = useState<HostedProperty[]>([]);
+  const [hostBookings, setHostBookings] = useState<any[]>([]);
   const [settings, setSettings] = useState<UserSettings>({
     emailNotifications: {
       newMessages: true,
@@ -161,6 +163,7 @@ export default function ProfileDashboard() {
         if (res.success && res.data) {
           const transformedBookings = res.data.map((booking: any) => ({
             id: booking.id,
+            propertyId: booking.property?.id || booking.propertyId || booking.id,
             propertyTitle: booking.property?.title || "Property",
             propertyLocation: booking.property?.location || "Location",
             checkIn: booking.startDate,
@@ -220,6 +223,9 @@ export default function ProfileDashboard() {
     };
     
     fetchHostedProperties();
+    getHostBookings(token).then((res) => {
+      if (res.success && res.data) setHostBookings(res.data);
+    }).catch(() => {});
   }, [token]);
 
   useEffect(() => {
@@ -654,7 +660,7 @@ export default function ProfileDashboard() {
                     <div className="space-y-4">
                       {bookings.map((booking) => (
                         <div key={booking.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition cursor-pointer"
-                          onClick={() => router.push(`/bookings/${booking.id}`)}>
+                          onClick={() => router.push(`/listings/${booking.propertyId || booking.id}`)}>
                           <div className="flex flex-col md:flex-row gap-4">
                             <div className="w-full md:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
                               <img 
@@ -784,7 +790,7 @@ export default function ProfileDashboard() {
                     <div className="space-y-4">
                       {hostedProperties.map((property) => (
                         <div key={property.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition cursor-pointer"
-                          onClick={() => router.push(`/properties/${property.id}`)}>
+                          onClick={() => router.push(`/listings/${property.id}`)}>
                           <div className="flex flex-col md:flex-row gap-4">
                             <div className="w-full md:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
                               <img 
@@ -832,6 +838,79 @@ export default function ProfileDashboard() {
                     </div>
                   )}
                 </div>
+
+                {/* Incoming booking requests */}
+                {hostBookings.length > 0 && (
+                  <div className="px-6 pb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-yellow-500" />
+                      Booking Requests
+                    </h3>
+                    <div className="space-y-3">
+                      {hostBookings.map((b: any) => {
+                        const statusColors: Record<string, string> = {
+                          pending: "bg-yellow-100 text-yellow-800",
+                          approved: "bg-green-100 text-green-800",
+                          rejected: "bg-red-100 text-red-800",
+                          completed: "bg-gray-100 text-gray-700",
+                          cancelled: "bg-gray-100 text-gray-500",
+                        };
+                        return (
+                          <div key={b.id} className="border border-gray-100 rounded-xl p-4 bg-gray-50">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div>
+                                <p className="font-medium text-gray-900 text-sm">{b.property?.title}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {new Date(b.startDate).toLocaleDateString()} → {new Date(b.endDate).toLocaleDateString()}
+                                </p>
+                                <p className="text-xs text-gray-600 mt-1">
+                                  <span className="font-medium">Guest:</span> {b.renter?.fullName || "Unknown"}
+                                  {b.renter?.phone && (
+                                    <a href={`tel:${b.renter.phone}`} className="ml-2 text-red-600 font-medium hover:underline">
+                                      📞 {b.renter.phone}
+                                    </a>
+                                  )}
+                                  {b.renter?.email && (
+                                    <a href={`mailto:${b.renter.email}`} className="ml-2 text-blue-600 hover:underline">
+                                      {b.renter.email}
+                                    </a>
+                                  )}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[b.status] || "bg-gray-100 text-gray-600"}`}>
+                                  {b.status}
+                                </span>
+                                {b.status === "pending" && (
+                                  <>
+                                    <button
+                                      onClick={async () => {
+                                        const res = await updateBookingStatus(token!, b.id, "approved");
+                                        if (res.success) setHostBookings((prev) => prev.map((x) => x.id === b.id ? { ...x, status: "approved" } : x));
+                                      }}
+                                      className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition"
+                                    >
+                                      Accept
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        const res = await updateBookingStatus(token!, b.id, "rejected");
+                                        if (res.success) setHostBookings((prev) => prev.map((x) => x.id === b.id ? { ...x, status: "rejected" } : x));
+                                      }}
+                                      className="px-3 py-1 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 transition"
+                                    >
+                                      Decline
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

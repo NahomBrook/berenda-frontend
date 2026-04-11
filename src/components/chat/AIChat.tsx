@@ -86,15 +86,18 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
         setConversationId(cid);
       }
 
+      const token = typeof window !== "undefined" ? localStorage.getItem("berenda_token") : null;
       const response = await fetch(`${API_BASE_URL}/ai/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ 
-          message: userMessage, 
+        body: JSON.stringify({
+          message: userMessage,
           conversationId: cid,
-          language: language === 'am' ? 'amharic' : 'english'
+          language: language === 'am' ? 'amharic' : 'english',
+          userName: (() => { try { const u = localStorage.getItem("berenda_user"); return u ? JSON.parse(u)?.fullName : undefined; } catch { return undefined; } })(),
         }),
       });
 
@@ -156,6 +159,17 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
     }
   };
 
+  /** Strip Cloudinary and other image URLs/markdown images from AI responses */
+  const stripImageContent = (text: string): string => {
+    // Remove markdown images: ![alt](url)
+    let cleaned = text.replace(/!\[.*?\]\(.*?\)/g, "");
+    // Remove bare Cloudinary URLs
+    cleaned = cleaned.replace(/https?:\/\/res\.cloudinary\.com\/\S+/gi, "");
+    // Remove bare URLs ending in image extensions
+    cleaned = cleaned.replace(/https?:\/\/\S+\.(jpg|jpeg|png|gif|webp|svg)(\?\S*)?/gi, "");
+    return cleaned.trim();
+  };
+
   if (!isOpen) return null;
 
   if (isMinimized) {
@@ -174,11 +188,12 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
   return (
     <>
       <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-fadeIn"
+        className="fixed inset-0 bg-black bg-opacity-50 z-50 animate-fadeIn md:hidden"
         onClick={onClose}
       />
-      
-      <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl z-50 flex flex-col animate-slideUp overflow-hidden">
+
+      {/* Mobile: full-screen. Desktop: bottom-right panel */}
+      <div className="fixed inset-0 md:inset-auto md:bottom-6 md:right-6 w-full md:w-96 h-full md:h-[600px] bg-white md:rounded-2xl shadow-2xl z-50 flex flex-col animate-slideUp overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b bg-red-600">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
@@ -236,7 +251,7 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
                     msg.isAi ? 'prose-gray' : 'prose-invert'
                   }`}>
                     <ReactMarkdown>
-                      {msg.message}
+                      {msg.isAi ? stripImageContent(msg.message) : msg.message}
                     </ReactMarkdown>
                   </div>
                 </div>
@@ -267,7 +282,7 @@ export default function AIChat({ isOpen, onClose }: AIChatProps) {
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder={t("ai.placeholder")}
               className="flex-1 border border-gray-200 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
               disabled={loading}

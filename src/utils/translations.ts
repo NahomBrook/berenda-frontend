@@ -16,6 +16,7 @@ export const translations = {
     "nav.messages": "Messages",
     "nav.admin": "Admin",
     "nav.notifications": "Notifications",
+    "nav.language": "Language",
 
     // Common
     "common.loading": "Loading...",
@@ -329,7 +330,9 @@ export const translations = {
     "host.notSelected": "Not selected",
     "host.image": "image",
     "host.images": "images",
-    "host.success": "Your property has been listed successfully! Redirecting...",
+    "host.success": "Your property has been submitted and is pending admin approval. You'll be notified once it's reviewed.",
+    "host.amenities.selectAll": "Select All",
+    "host.amenities.clearAll": "Clear All",
     "host.latitude": "Latitude",
     "host.longitude": "Longitude",
 
@@ -411,6 +414,7 @@ export const translations = {
     "nav.messages": "መልዕክቶች",
     "nav.admin": "አስተዳዳሪ",
     "nav.notifications": "ማሳወቂያዎች",
+    "nav.language": "ቋንቋ",
 
     // Common
     "common.loading": "በመጫን ላይ...",
@@ -608,7 +612,7 @@ export const translations = {
     "ai.tip": "💡 ስለ ንብረቶች፣ ቤት ምዝገባ ወይም ሆስቲንግ ለመጠየቅ ይሞክሩ",
     "ai.clear": "አጽዳ",
     "ai.typing": "ረዳት እየጻፈ ነው...",
-    "ai.welcome": "👋 ሰላም! እኔ የቤረንዳ ኤአይ ረዳት ነኝ።\n\nንብረቶችን ለማግኘት፣ ቤት ለመከራየት፣ ስለ ኪራይ ጥያቄዎችን ለመመለስ እና ሌሎችንም ላግዞት እችላለሁ!\n\nምን እርዳታ ይሻሉ?",
+    "ai.welcome": "👋 ሰላም! እኔ የበረንዳ ኤአይ ረዳት ነኝ።\n\nንብረቶችን ለማግኘት፣ ቤት ለመከራየት፣ ስለ ኪራይ ጥያቄዎችን ለመመለስ እና ሌሎችንም ላግዞት እችላለሁ!\n\nምን እርዳታ ይሻሉ?",
     "ai.error": "ይቅርታ፣ ለመገናኘት ችግር አጋጥሞኛል። እባክዎ ቆይተው እንደገና ይሞክሩ።",
 
     // Payment
@@ -724,7 +728,9 @@ export const translations = {
     "host.notSelected": "አልተመረጠም",
     "host.image": "ምስል",
     "host.images": "ምስሎች",
-    "host.success": "ንብረቱ በስኬት ተዘርዝሯል! ወደ ሌላ ቦታ እየተላከ...",
+    "host.success": "ንብረቱ ለአስተዳዳሪ ማረጋገጫ ተልኳል። ከተገምገሙ በኋላ ያሳውቅዎታል።",
+    "host.amenities.selectAll": "ሁሉንም ምረጥ",
+    "host.amenities.clearAll": "ሁሉንም አጽዳ",
     "host.latitude": "ኬክሮስ",
     "host.longitude": "ኬንትሮስ",
 

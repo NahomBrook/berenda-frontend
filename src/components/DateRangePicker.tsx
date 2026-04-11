@@ -97,9 +97,17 @@ export function DateRangePicker({
         }
       }, 100);
     } else if (selectedCheckIn && !selectedCheckOut) {
+      if (isSameDay(date, selectedCheckIn)) {
+        // Same day as check-in is not allowed — reset and start over
+        setSelectedCheckIn(null);
+        setIsSelectingCheckOut(false);
+        return;
+      }
       if (date < selectedCheckIn) {
+        // Clicked before check-in: swap, but only if not same day (already handled above)
         setSelectedCheckIn(date);
         setSelectedCheckOut(selectedCheckIn);
+        setIsSelectingCheckOut(false);
       } else {
         setSelectedCheckOut(date);
         setIsSelectingCheckOut(false);

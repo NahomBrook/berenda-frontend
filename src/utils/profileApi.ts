@@ -47,6 +47,25 @@ export const getFavorites = async (token: string) => {
 };
 
 // Add these missing functions
+export const getHostBookings = async (token: string) => {
+  const res = await fetch(`${API_BASE}/bookings/host`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+};
+
+export const updateBookingStatus = async (token: string, bookingId: string, status: string) => {
+  const res = await fetch(`${API_BASE}/bookings/${bookingId}/status`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+  return res.json();
+};
+
 export const getUserProperties = async (token: string) => {
   const res = await fetch(`${API_BASE}/properties/user/properties`, {
     headers: {

@@ -1,17 +1,227 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { getAllProperties, approveProperty, rejectProperty, deleteProperty } from "@/utils/adminApi";
 import Toast from "@/components/ui/Toast";
 
 type StatusFilter = "pending" | "approved" | "rejected" | "all";
 
+interface Property {
+  id: string;
+  title: string;
+  description?: string;
+  location?: string;
+  monthlyPrice?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  maxGuests?: number;
+  amenities?: string[];
+  approvalStatus: string;
+  owner?: { fullName?: string; email?: string };
+  media?: { mediaUrl: string; mediaType: string }[];
+}
+
+function PropertyDetailModal({
+  property,
+  onClose,
+  onApprove,
+  onReject,
+  onDelete,
+  isPending,
+}: {
+  property: Property;
+  onClose: () => void;
+  onApprove: () => void;
+  onReject: (reason: string) => void;
+  onDelete: () => void;
+  isPending: boolean;
+}) {
+  const [imgIndex, setImgIndex] = useState(0);
+  const [showReject, setShowReject] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const images = (property.media || []).filter((m) => m.mediaType === "image");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+          <h2 className="text-lg font-semibold text-gray-800 truncate pr-4">{property.title}</h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Image carousel */}
+        {images.length > 0 ? (
+          <div className="relative bg-gray-100 h-56 md:h-72">
+            <img
+              src={images[imgIndex].mediaUrl}
+              alt={property.title}
+              className="w-full h-full object-cover"
+            />
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={() => setImgIndex((i) => (i - 1 + images.length) % images.length)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-1 shadow"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setImgIndex((i) => (i + 1) % images.length)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-1 shadow"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <span className="absolute bottom-2 right-3 text-xs bg-black/50 text-white px-2 py-0.5 rounded-full">
+                  {imgIndex + 1} / {images.length}
+                </span>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="h-32 bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
+            No images
+          </div>
+        )}
+
+        {/* Details */}
+        <div className="px-6 py-4 space-y-4">
+          {/* Meta row */}
+          <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+            {property.location && <span>📍 {property.location}</span>}
+            {property.monthlyPrice && (
+              <span className="font-semibold text-gray-800">
+                ETB {property.monthlyPrice.toLocaleString()}/mo
+              </span>
+            )}
+            {property.bedrooms != null && <span>🛏 {property.bedrooms} bed</span>}
+            {property.bathrooms != null && <span>🚿 {property.bathrooms} bath</span>}
+            {property.maxGuests != null && <span>👥 {property.maxGuests} guests</span>}
+          </div>
+
+          {/* Owner */}
+          <div className="text-sm text-gray-500">
+            <span className="font-medium text-gray-700">Host: </span>
+            {property.owner?.fullName || property.owner?.email || "Unknown"}
+          </div>
+
+          {/* Description */}
+          {property.description && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Description</p>
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{property.description}</p>
+            </div>
+          )}
+
+          {/* Amenities */}
+          {property.amenities && property.amenities.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Amenities</p>
+              <div className="flex flex-wrap gap-2">
+                {property.amenities.map((a) => (
+                  <span key={a} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                    {a}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Inline reject form */}
+          {showReject && (
+            <div className="border border-yellow-300 bg-yellow-50 rounded-lg p-4 space-y-3">
+              <p className="text-sm font-medium text-yellow-800">Reason for rejection (optional)</p>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Enter reason..."
+                rows={3}
+                className="w-full border border-yellow-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { onReject(rejectReason); setShowReject(false); }}
+                  className="px-4 py-2 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600"
+                >
+                  Confirm Reject
+                </button>
+                <button
+                  onClick={() => { setShowReject(false); setRejectReason(""); }}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Inline delete confirm */}
+          {showDelete && (
+            <div className="border border-red-300 bg-red-50 rounded-lg p-4 space-y-3">
+              <p className="text-sm font-medium text-red-800">
+                Delete &quot;{property.title}&quot;? The host will be notified. This cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { onDelete(); setShowDelete(false); }}
+                  className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
+                >
+                  Yes, Delete
+                </button>
+                <button
+                  onClick={() => setShowDelete(false)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-2 pt-2 border-t">
+            {isPending && !showReject && !showDelete && (
+              <>
+                <button
+                  onClick={onApprove}
+                  className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={() => setShowReject(true)}
+                  className="px-4 py-2 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600"
+                >
+                  Reject
+                </button>
+              </>
+            )}
+            {!showDelete && !showReject && (
+              <button
+                onClick={() => setShowDelete(true)}
+                className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PropertiesTable() {
-  const [properties, setProperties] = useState<any[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("pending");
   const [toast, setToast] = useState<{ msg: string; type?: "success" | "error" } | null>(null);
+  const [selected, setSelected] = useState<Property | null>(null);
   const pendingRef = useRef<Record<string, boolean>>({});
 
   const fetchProperties = async () => {
@@ -32,9 +242,9 @@ export default function PropertiesTable() {
     return () => clearInterval(t);
   }, [page, statusFilter]);
 
-  // Remove a property from local state immediately after an action
   const removeLocally = (id: string) => {
     setProperties((prev) => prev.filter((p) => p.id !== id));
+    setSelected(null);
   };
 
   const handleApprove = async (id: string) => {
@@ -52,8 +262,7 @@ export default function PropertiesTable() {
     }
   };
 
-  const handleReject = async (id: string) => {
-    const reason = prompt("Reason for rejection (optional):");
+  const handleReject = async (id: string, reason?: string) => {
     if (pendingRef.current[id]) return;
     pendingRef.current[id] = true;
     removeLocally(id);
@@ -68,8 +277,7 @@ export default function PropertiesTable() {
     }
   };
 
-  const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Delete "${title}"? The host will be notified.`)) return;
+  const handleDelete = async (id: string) => {
     if (pendingRef.current[id]) return;
     pendingRef.current[id] = true;
     try {
@@ -100,8 +308,19 @@ export default function PropertiesTable() {
     <div>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
+      {selected && (
+        <PropertyDetailModal
+          property={selected}
+          onClose={() => setSelected(null)}
+          onApprove={() => handleApprove(selected.id)}
+          onReject={(reason) => handleReject(selected.id, reason)}
+          onDelete={() => handleDelete(selected.id)}
+          isPending={selected.approvalStatus === "pending"}
+        />
+      )}
+
       {/* Filter tabs */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 flex-wrap">
         {(["pending", "all", "approved", "rejected"] as StatusFilter[]).map((s) => (
           <button
             key={s}
@@ -136,35 +355,16 @@ export default function PropertiesTable() {
             <tbody>
               {properties.map((p) => (
                 <tr key={p.id} className="border-t hover:bg-gray-50">
-                  <td className="p-3 text-sm font-medium">{p.title}</td>
+                  <td className="p-3 text-sm font-medium max-w-[160px] truncate">{p.title}</td>
                   <td className="p-3 text-sm text-gray-600">{p.owner?.fullName || p.owner?.email}</td>
                   <td className="p-3 text-sm text-gray-700">{p.monthlyPrice?.toLocaleString()}</td>
                   <td className="p-3 text-sm">{statusBadge(p.approvalStatus)}</td>
-                  <td className="p-3 text-sm flex flex-wrap gap-1">
-                    {p.approvalStatus === "pending" && (
-                      <>
-                        <button
-                          disabled={!!pendingRef.current[p.id]}
-                          onClick={() => handleApprove(p.id)}
-                          className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:opacity-50"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          disabled={!!pendingRef.current[p.id]}
-                          onClick={() => handleReject(p.id)}
-                          className="px-2 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600 disabled:opacity-50"
-                        >
-                          Reject
-                        </button>
-                      </>
-                    )}
+                  <td className="p-3 text-sm">
                     <button
-                      disabled={!!pendingRef.current[p.id]}
-                      onClick={() => handleDelete(p.id, p.title)}
-                      className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-50"
+                      onClick={() => setSelected(p)}
+                      className="px-3 py-1 bg-gray-800 text-white rounded text-xs hover:bg-gray-700"
                     >
-                      Delete
+                      View Details
                     </button>
                   </td>
                 </tr>
