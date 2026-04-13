@@ -1,272 +1,31 @@
-// frontend/src/app/page.tsx
-"use client";
-
-import { useEffect, useState, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { MapPin } from "lucide-react";
-import Navbar from "@/components/layout/Navbar";
-import SearchBar from "@/components/home/SearchBar";
-import { propertyAPI } from "@/services/api";
+// Server component — fetches properties at request time and passes to client
+import { Suspense } from "react";
+import HomeClient from "./HomeClient";
 import type { Property } from "@/types/property";
-import { useLanguage } from "@/context/LanguageContext";
 
-export default function Home() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { t } = useLanguage();
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showSearchBar, setShowSearchBar] = useState(true);
-  const [showSearchInNav, setShowSearchInNav] = useState(false);
-  const [currentFilters, setCurrentFilters] = useState({
-    location: searchParams.get('location') || "",
-    checkIn: searchParams.get('checkIn') ? new Date(searchParams.get('checkIn')!) : null,
-    checkOut: searchParams.get('checkOut') ? new Date(searchParams.get('checkOut')!) : null,
-    homeType: searchParams.get('homeType')?.split(',') || [],
-    amenities: searchParams.get('amenities')?.split(',') || [],
-    minPrice: parseInt(searchParams.get('minPrice') || '0'),
-    maxPrice: parseInt(searchParams.get('maxPrice') || '5000'),
-    bedrooms: parseInt(searchParams.get('bedrooms') || '0'),
-  });
+// ISR: revalidate cached data every 60 seconds
+export const revalidate = 60;
 
-  const fetchProperties = useCallback(async (filters?: any) => {
-    try {
-      setLoading(true);
-      const f = filters || currentFilters;
-      const params: Record<string, string | number> = {};
-      if (f.location) params.location = f.location;
-      if (f.checkIn) params.checkIn = f.checkIn.toISOString();
-      if (f.checkOut) params.checkOut = f.checkOut.toISOString();
-      if (f.homeType?.length) params.homeType = f.homeType.join(',');
-      if (f.amenities?.length) params.amenities = f.amenities.join(',');
-      if (f.minPrice) params.minPrice = f.minPrice;
-      if (f.maxPrice && f.maxPrice < 5000) params.maxPrice = f.maxPrice;
-      if (f.bedrooms) params.bedrooms = f.bedrooms;
-      const response = await propertyAPI.list(params);
-      const data = response.data?.data || [];
-      setProperties(data);
-      setError(null);
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load properties');
-    } finally {
-      setLoading(false);
-    }
-  }, [currentFilters]);
-
-  useEffect(() => {
-    fetchProperties();
-  }, [fetchProperties]);
-
-  const handleSearch = useCallback((filters: any) => {
-    setCurrentFilters(filters);
-    fetchProperties(filters);
-    
-    const params = new URLSearchParams();
-    if (filters.location) params.set('location', filters.location);
-    if (filters.checkIn) params.set('checkIn', filters.checkIn?.toISOString() || "");
-    if (filters.checkOut) params.set('checkOut', filters.checkOut?.toISOString() || "");
-    if (filters.homeType?.length) params.set('homeType', filters.homeType.join(','));
-    if (filters.amenities?.length) params.set('amenities', filters.amenities.join(','));
-    if (filters.minPrice) params.set('minPrice', filters.minPrice.toString());
-    if (filters.maxPrice) params.set('maxPrice', filters.maxPrice.toString());
-    if (filters.bedrooms) params.set('bedrooms', filters.bedrooms.toString());
-    
-    window.history.replaceState({}, '', `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
-  }, [fetchProperties]);
-
-  // Handle scroll behavior
-  useEffect(() => {
-    let ticking = false;
-    
-    const handleScroll = () => {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          const scrollY = window.scrollY;
-          const scrolled = scrollY > 100;
-          
-          setShowSearchInNav(scrolled);
-          setShowSearchBar(!scrolled);
-          
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const handleSearchClick = useCallback(() => {
-    if (!showSearchBar) {
-      setShowSearchBar(true);
-      setShowSearchInNav(false);
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        setTimeout(() => {
-          const locationInput = document.querySelector('input[placeholder="Search destinations"]') as HTMLInputElement;
-          if (locationInput) {
-            locationInput.focus();
-          }
-        }, 500);
-      }, 50);
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      setTimeout(() => {
-        const locationInput = document.querySelector('input[placeholder="Search destinations"]') as HTMLInputElement;
-        if (locationInput) {
-          locationInput.focus();
-        }
-      }, 500);
-    }
-  }, [showSearchBar]);
-
-  const optimizeCloudinaryUrl = (url: string): string => {
-    if (!url.includes('res.cloudinary.com')) return url;
-    return url.replace('/upload/', '/upload/w_600,q_auto,f_auto/');
-  };
-
-  const getPropertyImage = (property: Property): string => {
-    if (!property.media || property.media.length === 0) {
-      return '/placeholder.png';
-    }
-    const imageUrl = property.media[0]?.mediaUrl || property.media[0]?.url;
-    return imageUrl ? optimizeCloudinaryUrl(imageUrl) : '/placeholder.png';
-  };
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <Navbar 
-          onSearchClick={handleSearchClick}
-          showSearchButton={showSearchInNav}
-        />
-        <SearchBar isVisible={showSearchBar} onSearch={handleSearch} />
-        <div className="max-w-6xl mx-auto mt-8 px-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="border rounded-lg overflow-hidden animate-pulse bg-white">
-                <div className="w-full h-48 bg-gray-200" />
-                <div className="p-4 space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                  <div className="h-4 bg-gray-200 rounded w-1/2" />
-                  <div className="h-4 bg-gray-200 rounded w-1/4" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </main>
-    );
+async function fetchInitialProperties(): Promise<Property[]> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://berenda-backend-ow7d.onrender.com/api';
+    const res = await fetch(`${apiUrl}/properties?limit=20`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.data || [];
+  } catch {
+    return [];
   }
+}
 
-  if (error) {
-    return (
-      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <Navbar 
-          onSearchClick={handleSearchClick}
-          showSearchButton={showSearchInNav}
-        />
-        <SearchBar isVisible={showSearchBar} onSearch={handleSearch} />
-        <div className="max-w-6xl mx-auto mt-8 px-4 text-center">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-8">
-            <p className="text-red-600 mb-4">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              {t("common.tryAgain")}
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
+export default async function Home() {
+  const initialProperties = await fetchInitialProperties();
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col">
-      <Navbar
-        onSearchClick={handleSearchClick}
-        showSearchButton={showSearchInNav}
-      />
-
-      <SearchBar isVisible={showSearchBar} onSearch={handleSearch} />
-
-      <div className="max-w-6xl mx-auto px-4 flex-1 w-full">
-        {properties.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">{t("home.noProperties")}</p>
-            <p className="text-gray-400 text-sm mt-2">{t("home.noPropertiesHint")}</p>
-          </div>
-        ) : (
-          <>
-            <div className="mb-4 text-sm text-gray-600 mt-8">
-              {t("home.found")} {properties.length} {t("home.properties")}
-              {currentFilters.location && ` in ${currentFilters.location}`}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-              {properties.map((property, index) => (
-                <div
-                  key={property.id}
-                  className="bg-white border rounded-lg overflow-hidden cursor-pointer hover:shadow-xl transition-all transform hover:-translate-y-1"
-                  onClick={() => router.push(`/listings/${property.id}`)}
-                >
-                  <div className="relative h-40 sm:h-48 bg-gray-100">
-                    <img
-                      src={getPropertyImage(property)}
-                      alt={property.title}
-                      className="w-full h-full object-cover"
-                      loading={index < 4 ? "eager" : "lazy"}
-                      decoding="async"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/placeholder.png';
-                      }}
-                    />
-                  </div>
-                  <div className="p-4">
-                    <h2 className="font-bold text-lg truncate">{property.title}</h2>
-                    <p className="text-gray-600 text-sm mb-2 flex items-center">
-                      <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-                      <span className="truncate">{property.location}</span>
-                    </p>
-                    <div className="flex justify-between items-center">
-                      <p className="text-red-600 font-semibold">
-                        ${property.monthlyPrice.toLocaleString()}
-                        <span className="text-sm text-gray-500 font-normal">{t("home.perMonth")}</span>
-                      </p>
-                      {property.bedrooms && (
-                        <span className="text-xs text-gray-500 flex items-center">
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                          </svg>
-                          {property.bedrooms} {property.bedrooms === 1 ? t("home.bed") : t("home.beds")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Footer */}
-      <footer className="mt-16 border-t bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
-          <span>{t("footer.copyright")}</span>
-          <div className="flex gap-6">
-            <a href="/terms" className="hover:text-red-600 transition-colors">
-              {t("footer.terms")}
-            </a>
-            <a href="/terms#privacy" className="hover:text-red-600 transition-colors">
-              {t("footer.privacy")}
-            </a>
-          </div>
-        </div>
-      </footer>
-    </main>
+    <Suspense fallback={null}>
+      <HomeClient initialProperties={initialProperties} />
+    </Suspense>
   );
 }
