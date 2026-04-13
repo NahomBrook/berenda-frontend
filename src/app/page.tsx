@@ -123,17 +123,17 @@ export default function Home() {
     }
   }, [showSearchBar]);
 
+  const optimizeCloudinaryUrl = (url: string): string => {
+    if (!url.includes('res.cloudinary.com')) return url;
+    return url.replace('/upload/', '/upload/w_600,q_auto,f_auto/');
+  };
+
   const getPropertyImage = (property: Property): string => {
     if (!property.media || property.media.length === 0) {
       return '/placeholder.png';
     }
-    
-    const realImage = property.media.find(m => 
-      m.url && !m.url.includes('placeimg.com') && !m.mediaUrl?.includes('placeimg.com')
-    );
-    
-    const imageUrl = realImage?.url || realImage?.mediaUrl || property.media[0]?.url || property.media[0]?.mediaUrl;
-    return imageUrl || '/placeholder.png';
+    const imageUrl = property.media[0]?.mediaUrl || property.media[0]?.url;
+    return imageUrl ? optimizeCloudinaryUrl(imageUrl) : '/placeholder.png';
   };
 
   if (loading) {
@@ -206,27 +206,24 @@ export default function Home() {
               {t("home.found")} {properties.length} {t("home.properties")}
               {currentFilters.location && ` in ${currentFilters.location}`}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {properties.map((property) => (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+              {properties.map((property, index) => (
                 <div
                   key={property.id}
                   className="bg-white border rounded-lg overflow-hidden cursor-pointer hover:shadow-xl transition-all transform hover:-translate-y-1"
                   onClick={() => router.push(`/listings/${property.id}`)}
                 >
-                  <div className="relative h-48 bg-gray-100">
+                  <div className="relative h-40 sm:h-48 bg-gray-100">
                     <img
                       src={getPropertyImage(property)}
                       alt={property.title}
                       className="w-full h-full object-cover"
+                      loading={index < 4 ? "eager" : "lazy"}
+                      decoding="async"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = '/placeholder.png';
                       }}
                     />
-                    {property.media && property.media.length > 1 && (
-                      <span className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded-full">
-                        +{property.media.length}
-                      </span>
-                    )}
                   </div>
                   <div className="p-4">
                     <h2 className="font-bold text-lg truncate">{property.title}</h2>
