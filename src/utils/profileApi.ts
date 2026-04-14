@@ -81,3 +81,19 @@ export const updateUserSettings = (settings: any, token: string) =>
     },
     body: JSON.stringify(settings),
   });
+
+export const deleteHostProperty = (propertyId: string, token: string) =>
+  authedFetch(`${API_BASE}/properties/${propertyId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const submitPropertyAppeal = (propertyId: string, appealMessage: string, token: string) =>
+  authedFetch(`${API_BASE}/properties/${propertyId}/appeal`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ appealMessage }),
+  });

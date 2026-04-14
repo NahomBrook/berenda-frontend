@@ -108,6 +108,7 @@ export default function PropertyDetailPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookedRanges, setBookedRanges] = useState<{ startDate: string; endDate: string }[]>([]);
 
   const safeMonthlyPrice = property?.monthlyPrice || 0;
   const safeTitle = property?.title || '';
@@ -135,18 +136,18 @@ export default function PropertyDetailPage() {
         setLoading(true);
         setError(null);
         console.log("Fetching property with ID:", propertyId);
-        
+
         const data = await getPropertyById(propertyId);
         console.log("Fetched property data:", data);
-        
+
         if (!data || (!data.id && !data.data)) {
           throw new Error("Property not found");
         }
-        
+
         // Handle response structure (data might be wrapped in data.data)
         const propertyData = data.data || data;
         setProperty(propertyData);
-        
+
         setFormData({
           title: propertyData.title || "",
           location: propertyData.location || "",
@@ -157,12 +158,24 @@ export default function PropertyDetailPage() {
           area: propertyData.area?.toString() || "",
           maxGuests: propertyData.maxGuests?.toString() || "",
         });
+
+        // Fetch booked date ranges so the calendar can block unavailable dates
+        try {
+          const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+          const bookedRes = await fetch(`${API_BASE_URL}/properties/${propertyId}/booked-dates`);
+          if (bookedRes.ok) {
+            const bookedData = await bookedRes.json();
+            setBookedRanges(bookedData.data || []);
+          }
+        } catch {
+          // Non-fatal — calendar just won't show blocked dates
+        }
       } catch (error) {
         console.error("Error fetching property:", error);
         setError("Failed to load property. Please try again.");
-        setMessage({ 
-          text: "Failed to load property. Please try again.", 
-          type: "error" 
+        setMessage({
+          text: "Failed to load property. Please try again.",
+          type: "error"
         });
       } finally {
         setLoading(false);
@@ -784,6 +797,7 @@ export default function PropertyDetailPage() {
             onCheckInChange={setCheckIn}
             onCheckOutChange={setCheckOut}
             onClose={() => setShowDatePicker(false)}
+            bookedRanges={bookedRanges}
           />
         </div>
       )}

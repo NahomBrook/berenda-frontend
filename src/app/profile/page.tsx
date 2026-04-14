@@ -22,8 +22,11 @@ import {
   Building2,
   Globe,
   Lock,
+  Trash2,
+  AlertCircle,
+  Send,
 } from "lucide-react";
-import { getProfile, updateProfile, getUserBookings, getFavorites, getUserProperties, updateUserSettings, getSettings, getHostBookings, updateBookingStatus } from "../../utils/profileApi";
+import { getProfile, updateProfile, getUserBookings, getFavorites, getUserProperties, updateUserSettings, getSettings, getHostBookings, updateBookingStatus, deleteHostProperty, submitPropertyAppeal } from "../../utils/profileApi";
 import Navbar from "@/components/layout/Navbar";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -62,6 +65,8 @@ interface HostedProperty {
   status: 'pending' | 'approved' | 'rejected';
   imageUrl: string;
   createdAt: string;
+  rejectionReason?: string;
+  appealMessage?: string;
 }
 
 interface UserSettings {
@@ -111,6 +116,11 @@ export default function ProfileDashboard() {
     currency: "USD",
   });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [appealModal, setAppealModal] = useState<{ open: boolean; propertyId: string; propertyTitle: string; rejectionReason: string }>({
+    open: false, propertyId: "", propertyTitle: "", rejectionReason: "",
+  });
+  const [appealText, setAppealText] = useState("");
+  const [appealSubmitting, setAppealSubmitting] = useState(false);
 
   const tabs: Tab[] = [
     { name: t("profile.tab.profile"), key: "profile", icon: <User className="w-5 h-5" /> },
@@ -128,6 +138,24 @@ export default function ProfileDashboard() {
     }
     setToken(storedToken);
   }, [router]);
+
+  // Read ?tab= and ?propertyId= from URL on mount and switch tab / open appeal modal
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    const propertyIdParam = params.get("propertyId");
+    if (tabParam) {
+      const found = tabs.find((t) => t.key === tabParam);
+      if (found) setActiveTab(found);
+    }
+    // If a propertyId is in the URL (from rejection notification), we'll open
+    // the appeal modal once hostedProperties are loaded (handled below).
+    if (propertyIdParam) {
+      sessionStorage.setItem("appeal_propertyId", propertyIdParam);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -214,8 +242,25 @@ export default function ProfileDashboard() {
             status: property.approvalStatus,
             imageUrl: property.media?.[0]?.mediaUrl || "/placeholder.png",
             createdAt: property.createdAt,
+            rejectionReason: property.rejectionReason || undefined,
+            appealMessage: property.appealMessage || undefined,
           }));
           setHostedProperties(transformedProperties);
+
+          // Auto-open appeal modal if notification deep-linked to a specific property
+          const pendingAppealId = sessionStorage.getItem("appeal_propertyId");
+          if (pendingAppealId) {
+            sessionStorage.removeItem("appeal_propertyId");
+            const target = transformedProperties.find((p: HostedProperty) => p.id === pendingAppealId);
+            if (target && target.status === "rejected") {
+              setAppealModal({
+                open: true,
+                propertyId: target.id,
+                propertyTitle: target.title,
+                rejectionReason: target.rejectionReason || "Does not meet our listing requirements",
+              });
+            }
+          }
         }
       } catch (error) {
         console.error("Error fetching hosted properties:", error);
@@ -332,6 +377,54 @@ export default function ProfileDashboard() {
     localStorage.removeItem("berenda_token");
     localStorage.removeItem("berenda_user");
     router.push("/");
+  };
+
+  const handleDeleteProperty = async (propertyId: string, propertyTitle: string) => {
+    if (!token) return;
+    if (!window.confirm(`Delete "${propertyTitle}"? This cannot be undone.`)) return;
+    try {
+      const res = await deleteHostProperty(propertyId, token);
+      if (res.success) {
+        setHostedProperties((prev) => prev.filter((p) => p.id !== propertyId));
+        setMessage("Property deleted successfully.");
+        setMessageType("success");
+        setTimeout(() => setMessage(""), 3000);
+      }
+    } catch (err: any) {
+      setMessage(err.message || "Failed to delete property.");
+      setMessageType("error");
+      setTimeout(() => setMessage(""), 3000);
+    }
+  };
+
+  const handleSubmitAppeal = async () => {
+    if (!token || !appealText.trim()) return;
+    setAppealSubmitting(true);
+    try {
+      const res = await submitPropertyAppeal(appealModal.propertyId, appealText, token);
+      if (res.success) {
+        setHostedProperties((prev) =>
+          prev.map((p) =>
+            p.id === appealModal.propertyId ? { ...p, appealMessage: appealText } : p
+          )
+        );
+        setAppealModal({ open: false, propertyId: "", propertyTitle: "", rejectionReason: "" });
+        setAppealText("");
+        setMessage("Appeal submitted successfully. The admin will review it.");
+        setMessageType("success");
+        setTimeout(() => setMessage(""), 4000);
+      } else {
+        setMessage(res.message || "Failed to submit appeal.");
+        setMessageType("error");
+        setTimeout(() => setMessage(""), 3000);
+      }
+    } catch (err: any) {
+      setMessage(err.message || "Failed to submit appeal.");
+      setMessageType("error");
+      setTimeout(() => setMessage(""), 3000);
+    } finally {
+      setAppealSubmitting(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -789,12 +882,14 @@ export default function ProfileDashboard() {
                   ) : (
                     <div className="space-y-4">
                       {hostedProperties.map((property) => (
-                        <div key={property.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition cursor-pointer"
-                          onClick={() => router.push(`/listings/${property.id}`)}>
+                        <div key={property.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition">
                           <div className="flex flex-col md:flex-row gap-4">
-                            <div className="w-full md:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
-                              <img 
-                                src={property.imageUrl} 
+                            <div
+                              className="w-full md:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
+                              onClick={() => router.push(`/listings/${property.id}`)}
+                            >
+                              <img
+                                src={property.imageUrl}
                                 alt={property.title}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
@@ -802,17 +897,26 @@ export default function ProfileDashboard() {
                                 }}
                               />
                             </div>
-                            <div className="flex-1">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <h3 className="font-semibold text-lg text-gray-900">{property.title}</h3>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="min-w-0 cursor-pointer" onClick={() => router.push(`/listings/${property.id}`)}>
+                                  <h3 className="font-semibold text-lg text-gray-900 truncate">{property.title}</h3>
                                   <p className="text-gray-600 text-sm mt-1">{property.location}</p>
                                 </div>
-                                <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${getHostingStatusColor(property.status)}`}>
-                                  {property.status === 'pending' && <Clock className="w-4 h-4" />}
-                                  {property.status === 'approved' && <CheckCircle className="w-4 h-4" />}
-                                  {property.status === 'rejected' && <XCircle className="w-4 h-4" />}
-                                  <span className="capitalize">{property.status}</span>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${getHostingStatusColor(property.status)}`}>
+                                    {property.status === 'pending' && <Clock className="w-4 h-4" />}
+                                    {property.status === 'approved' && <CheckCircle className="w-4 h-4" />}
+                                    {property.status === 'rejected' && <XCircle className="w-4 h-4" />}
+                                    <span className="capitalize">{property.status}</span>
+                                  </div>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteProperty(property.id, property.title); }}
+                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                                    title="Delete property"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </div>
                               </div>
                               <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-600">
@@ -831,6 +935,40 @@ export default function ProfileDashboard() {
                                   </div>
                                 )}
                               </div>
+                              {/* Rejection reason + appeal */}
+                              {property.status === 'rejected' && (
+                                <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-lg">
+                                  <div className="flex items-start gap-2">
+                                    <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-red-700">Rejection reason:</p>
+                                      <p className="text-sm text-red-600 mt-0.5">
+                                        {property.rejectionReason || "Does not meet our listing requirements"}
+                                      </p>
+                                      {property.appealMessage ? (
+                                        <p className="text-xs text-gray-500 mt-2 italic">
+                                          Appeal submitted: "{property.appealMessage}"
+                                        </p>
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            setAppealModal({
+                                              open: true,
+                                              propertyId: property.id,
+                                              propertyTitle: property.title,
+                                              rejectionReason: property.rejectionReason || "Does not meet our listing requirements",
+                                            });
+                                            setAppealText("");
+                                          }}
+                                          className="mt-2 text-xs text-red-600 font-medium hover:text-red-700 underline"
+                                        >
+                                          Submit an appeal
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1036,6 +1174,59 @@ export default function ProfileDashboard() {
           </main>
         </div>
       </div>
+
+      {/* Appeal Modal */}
+      {appealModal.open && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Submit an Appeal</h3>
+              <button
+                onClick={() => { setAppealModal({ open: false, propertyId: "", propertyTitle: "", rejectionReason: "" }); setAppealText(""); }}
+                className="p-2 hover:bg-gray-100 rounded-full transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg">
+              <p className="text-sm font-medium text-red-700">Property: {appealModal.propertyTitle}</p>
+              <p className="text-sm text-red-600 mt-1">Rejection reason: {appealModal.rejectionReason}</p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Your appeal message <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={appealText}
+                onChange={(e) => setAppealText(e.target.value)}
+                placeholder="Explain why your property should be reconsidered. Provide any relevant details that address the rejection reason..."
+                rows={5}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 resize-none text-sm"
+              />
+              <p className="text-xs text-gray-500 mt-1">{appealText.length}/500 characters</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setAppealModal({ open: false, propertyId: "", propertyTitle: "", rejectionReason: "" }); setAppealText(""); }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitAppeal}
+                disabled={appealSubmitting || !appealText.trim()}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="w-4 h-4" />
+                {appealSubmitting ? "Submitting..." : "Submit Appeal"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

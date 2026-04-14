@@ -43,12 +43,18 @@ function jdnToEthiopian(jdn: number): { year: number; month: number; day: number
   return { year, month: Math.min(month, 13), day };
 }
 
+interface BookedRange {
+  startDate: string;
+  endDate: string;
+}
+
 interface DateRangePickerProps {
   checkIn: Date | null;
   checkOut: Date | null;
   onCheckInChange: (date: Date | null) => void;
   onCheckOutChange: (date: Date | null) => void;
   onClose: () => void;
+  bookedRanges?: BookedRange[];
 }
 
 export function DateRangePicker({
@@ -57,6 +63,7 @@ export function DateRangePicker({
   onCheckInChange,
   onCheckOutChange,
   onClose,
+  bookedRanges = [],
 }: DateRangePickerProps) {
   const { language, t } = useLanguage();
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -150,8 +157,17 @@ export function DateRangePicker({
            (selectedCheckOut && isSameDay(date, selectedCheckOut));
   };
 
+  const isBooked = (date: Date): boolean => {
+    if (!bookedRanges.length) return false;
+    return bookedRanges.some((range) => {
+      const start = startOfDay(new Date(range.startDate));
+      const end = startOfDay(new Date(range.endDate));
+      return date >= start && date <= end;
+    });
+  };
+
   const isDisabled = (date: Date) => {
-    return isBefore(date, startOfDay(new Date()));
+    return isBefore(date, startOfDay(new Date())) || isBooked(date);
   };
 
   const getMonthDisplay = () => {
@@ -311,6 +327,7 @@ export function DateRangePicker({
                 return <div key={`empty-${index}`} className="p-3" />;
               }
 
+              const booked = isBooked(day);
               const disabled = isDisabled(day);
               const selected = isSelected(day);
               const inRange = isInRange(day);
@@ -326,18 +343,26 @@ export function DateRangePicker({
                   onMouseEnter={() => !disabled && setHoverDate(day)}
                   onMouseLeave={() => setHoverDate(null)}
                   disabled={disabled}
+                  title={booked ? "Already booked" : undefined}
                   className={`
                     relative p-3 text-center rounded-full transition-all duration-300
-                    ${disabled ? "text-gray-300 cursor-not-allowed" : "hover:bg-gray-100 cursor-pointer hover:scale-105"}
+                    ${disabled && !booked ? "text-gray-300 cursor-not-allowed" : ""}
+                    ${booked ? "cursor-not-allowed bg-gray-100" : ""}
+                    ${!disabled ? "hover:bg-gray-100 cursor-pointer hover:scale-105" : ""}
                     ${selected ? "bg-red-500 text-white hover:bg-red-600 shadow-md scale-105" : ""}
                     ${(inRange || isHovered) && !selected ? "bg-red-50" : ""}
                     ${isStart || isEnd ? "ring-2 ring-red-500 ring-offset-2" : ""}
                     ${isAnimated ? "animate-bounce" : ""}
                   `}
                 >
-                  <span className="relative z-10 text-sm font-medium">
+                  <span className={`relative z-10 text-sm font-medium ${booked ? "text-gray-400 line-through" : ""}`}>
                     {getDayDisplay(day)}
                   </span>
+                  {booked && (
+                    <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className="block w-full border-t border-gray-300 absolute" style={{ transform: "rotate(-45deg)" }} />
+                    </span>
+                  )}
                   {isStart && (
                     <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs text-red-500 font-medium whitespace-nowrap animate-fadeIn">
                       {t("calendar.checkInLabel")}
