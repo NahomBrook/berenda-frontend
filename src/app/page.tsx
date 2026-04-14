@@ -1,5 +1,4 @@
-// Server component — fetches properties at request time and passes to client
-import { Suspense } from "react";
+// Server component — fetches properties at build/request time and passes to client
 import HomeClient from "./HomeClient";
 import type { Property } from "@/types/property";
 
@@ -8,7 +7,9 @@ export const revalidate = 60;
 
 async function fetchInitialProperties(): Promise<Property[]> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://berenda-backend-ow7d.onrender.com/api';
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL ||
+      "https://berenda-backend-ow7d.onrender.com/api";
     const res = await fetch(`${apiUrl}/properties?limit=20`, {
       next: { revalidate: 60 },
     });
@@ -22,10 +23,5 @@ async function fetchInitialProperties(): Promise<Property[]> {
 
 export default async function Home() {
   const initialProperties = await fetchInitialProperties();
-
-  return (
-    <Suspense fallback={null}>
-      <HomeClient initialProperties={initialProperties} />
-    </Suspense>
-  );
+  return <HomeClient initialProperties={initialProperties} />;
 }

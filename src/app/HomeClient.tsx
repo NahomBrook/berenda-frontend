@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { MapPin } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import SearchBar from "@/components/home/SearchBar";
@@ -13,32 +13,63 @@ interface Props {
   initialProperties: Property[];
 }
 
+function parseInitialFilters() {
+  if (typeof window === "undefined") {
+    return {
+      location: "",
+      checkIn: null as Date | null,
+      checkOut: null as Date | null,
+      homeType: [] as string[],
+      amenities: [] as string[],
+      minPrice: 0,
+      maxPrice: 5000,
+      bedrooms: 0,
+    };
+  }
+  const params = new URLSearchParams(window.location.search);
+  return {
+    location: params.get("location") || "",
+    checkIn: params.get("checkIn") ? new Date(params.get("checkIn")!) : null,
+    checkOut: params.get("checkOut") ? new Date(params.get("checkOut")!) : null,
+    homeType: params.get("homeType")?.split(",") || [],
+    amenities: params.get("amenities")?.split(",") || [],
+    minPrice: parseInt(params.get("minPrice") || "0"),
+    maxPrice: parseInt(params.get("maxPrice") || "5000"),
+    bedrooms: parseInt(params.get("bedrooms") || "0"),
+  };
+}
+
 export default function HomeClient({ initialProperties }: Props) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { t } = useLanguage();
+
   const [properties, setProperties] = useState<Property[]>(initialProperties);
-  // No initial loading state — we already have data from the server
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSearchBar, setShowSearchBar] = useState(true);
   const [showSearchInNav, setShowSearchInNav] = useState(false);
-  const [currentFilters, setCurrentFilters] = useState({
-    location: searchParams.get('location') || "",
-    checkIn: searchParams.get('checkIn') ? new Date(searchParams.get('checkIn')!) : null,
-    checkOut: searchParams.get('checkOut') ? new Date(searchParams.get('checkOut')!) : null,
-    homeType: searchParams.get('homeType')?.split(',') || [],
-    amenities: searchParams.get('amenities')?.split(',') || [],
-    minPrice: parseInt(searchParams.get('minPrice') || '0'),
-    maxPrice: parseInt(searchParams.get('maxPrice') || '5000'),
-    bedrooms: parseInt(searchParams.get('bedrooms') || '0'),
-  });
+  // Lazy initializer: reads URL params once on mount (client-only — no useSearchParams needed)
+  const [currentFilters, setCurrentFilters] = useState(parseInitialFilters);
 
-  // Only re-fetch if URL has active filters (user navigated with filters)
+  // If server gave us empty properties (build-time fetch failed), fetch client-side
   useEffect(() => {
-    const hasFilters = searchParams.get('location') || searchParams.get('checkIn') ||
-      searchParams.get('minPrice') || searchParams.get('bedrooms');
-    if (hasFilters) {
+    if (initialProperties.length === 0) {
+      fetchProperties();
+    }
+    // Only on mount — safe to omit fetchProperties from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // If URL has active filters (user navigated with query string), re-fetch with those filters
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const hasFilters =
+      params.get("location") ||
+      params.get("checkIn") ||
+      params.get("minPrice") ||
+      params.get("bedrooms");
+    if (hasFilters && initialProperties.length > 0) {
       fetchProperties(currentFilters);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -52,8 +83,8 @@ export default function HomeClient({ initialProperties }: Props) {
       if (f.location) params.location = f.location;
       if (f.checkIn) params.checkIn = f.checkIn.toISOString();
       if (f.checkOut) params.checkOut = f.checkOut.toISOString();
-      if (f.homeType?.length) params.homeType = f.homeType.join(',');
-      if (f.amenities?.length) params.amenities = f.amenities.join(',');
+      if (f.homeType?.length) params.homeType = f.homeType.join(",");
+      if (f.amenities?.length) params.amenities = f.amenities.join(",");
       if (f.minPrice) params.minPrice = f.minPrice;
       if (f.maxPrice && f.maxPrice < 5000) params.maxPrice = f.maxPrice;
       if (f.bedrooms) params.bedrooms = f.bedrooms;
@@ -62,8 +93,8 @@ export default function HomeClient({ initialProperties }: Props) {
       setProperties(data);
       setError(null);
     } catch (err) {
-      console.error('Fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load properties');
+      console.error("Fetch error:", err);
+      setError(err instanceof Error ? err.message : "Failed to load properties");
     } finally {
       setLoading(false);
     }
@@ -74,19 +105,23 @@ export default function HomeClient({ initialProperties }: Props) {
     fetchProperties(filters);
 
     const params = new URLSearchParams();
-    if (filters.location) params.set('location', filters.location);
-    if (filters.checkIn) params.set('checkIn', filters.checkIn?.toISOString() || "");
-    if (filters.checkOut) params.set('checkOut', filters.checkOut?.toISOString() || "");
-    if (filters.homeType?.length) params.set('homeType', filters.homeType.join(','));
-    if (filters.amenities?.length) params.set('amenities', filters.amenities.join(','));
-    if (filters.minPrice) params.set('minPrice', filters.minPrice.toString());
-    if (filters.maxPrice) params.set('maxPrice', filters.maxPrice.toString());
-    if (filters.bedrooms) params.set('bedrooms', filters.bedrooms.toString());
+    if (filters.location) params.set("location", filters.location);
+    if (filters.checkIn) params.set("checkIn", filters.checkIn?.toISOString() || "");
+    if (filters.checkOut) params.set("checkOut", filters.checkOut?.toISOString() || "");
+    if (filters.homeType?.length) params.set("homeType", filters.homeType.join(","));
+    if (filters.amenities?.length) params.set("amenities", filters.amenities.join(","));
+    if (filters.minPrice) params.set("minPrice", filters.minPrice.toString());
+    if (filters.maxPrice) params.set("maxPrice", filters.maxPrice.toString());
+    if (filters.bedrooms) params.set("bedrooms", filters.bedrooms.toString());
 
-    window.history.replaceState({}, '', `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
+    window.history.replaceState(
+      {},
+      "",
+      `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`
+    );
   }, [fetchProperties]);
 
-  // Handle scroll behavior
+  // Scroll behavior
   useEffect(() => {
     let ticking = false;
     const handleScroll = () => {
@@ -109,77 +144,35 @@ export default function HomeClient({ initialProperties }: Props) {
       setShowSearchBar(true);
       setShowSearchInNav(false);
       setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: "smooth" });
         setTimeout(() => {
-          const locationInput = document.querySelector('input[placeholder="Search destinations"]') as HTMLInputElement;
-          if (locationInput) locationInput.focus();
+          const el = document.querySelector(
+            'input[placeholder="Search destinations"]'
+          ) as HTMLInputElement;
+          if (el) el.focus();
         }, 500);
       }, 50);
     } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
       setTimeout(() => {
-        const locationInput = document.querySelector('input[placeholder="Search destinations"]') as HTMLInputElement;
-        if (locationInput) locationInput.focus();
+        const el = document.querySelector(
+          'input[placeholder="Search destinations"]'
+        ) as HTMLInputElement;
+        if (el) el.focus();
       }, 500);
     }
   }, [showSearchBar]);
 
   const optimizeCloudinaryUrl = (url: string): string => {
-    if (!url.includes('res.cloudinary.com')) return url;
-    return url.replace('/upload/', '/upload/w_600,q_auto,f_auto/');
+    if (!url.includes("res.cloudinary.com")) return url;
+    return url.replace("/upload/", "/upload/w_600,q_auto,f_auto/");
   };
 
   const getPropertyImage = (property: Property): string => {
-    if (!property.media || property.media.length === 0) return '/placeholder.png';
+    if (!property.media || property.media.length === 0) return "/placeholder.png";
     const imageUrl = property.media[0]?.mediaUrl || property.media[0]?.url;
-    return imageUrl ? optimizeCloudinaryUrl(imageUrl) : '/placeholder.png';
+    return imageUrl ? optimizeCloudinaryUrl(imageUrl) : "/placeholder.png";
   };
-
-  const PropertyGrid = () => (
-    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-      {properties.map((property, index) => (
-        <div
-          key={property.id}
-          className="bg-white border rounded-lg overflow-hidden cursor-pointer hover:shadow-xl transition-all transform hover:-translate-y-1"
-          onClick={() => router.push(`/listings/${property.id}`)}
-        >
-          <div className="relative h-40 sm:h-48 bg-gray-100">
-            <img
-              src={getPropertyImage(property)}
-              alt={property.title}
-              className="w-full h-full object-cover"
-              loading={index < 4 ? "eager" : "lazy"}
-              decoding="async"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/placeholder.png';
-              }}
-            />
-          </div>
-          <div className="p-3 sm:p-4">
-            <h2 className="font-bold text-base sm:text-lg truncate">{property.title}</h2>
-            <p className="text-gray-600 text-sm mb-2 flex items-center">
-              <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-              <span className="truncate">{property.location}</span>
-            </p>
-            <div className="flex justify-between items-center">
-              <p className="text-red-600 font-semibold text-sm sm:text-base">
-                ${property.monthlyPrice.toLocaleString()}
-                <span className="text-xs sm:text-sm text-gray-500 font-normal">{t("home.perMonth")}</span>
-              </p>
-              {property.bedrooms && (
-                <span className="text-xs text-gray-500 flex items-center">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                  {property.bedrooms} {property.bedrooms === 1 ? t("home.bed") : t("home.beds")}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col">
@@ -195,7 +188,10 @@ export default function HomeClient({ initialProperties }: Props) {
           <div className="mt-8">
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="border rounded-lg overflow-hidden animate-pulse bg-white">
+                <div
+                  key={i}
+                  className="border rounded-lg overflow-hidden animate-pulse bg-white"
+                >
                   <div className="w-full h-40 sm:h-48 bg-gray-200" />
                   <div className="p-3 sm:p-4 space-y-3">
                     <div className="h-4 bg-gray-200 rounded w-3/4" />
@@ -229,7 +225,66 @@ export default function HomeClient({ initialProperties }: Props) {
               {t("home.found")} {properties.length} {t("home.properties")}
               {currentFilters.location && ` in ${currentFilters.location}`}
             </div>
-            <PropertyGrid />
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+              {properties.map((property, index) => (
+                <div
+                  key={property.id}
+                  className="bg-white border rounded-lg overflow-hidden cursor-pointer hover:shadow-xl transition-all transform hover:-translate-y-1"
+                  onClick={() => router.push(`/listings/${property.id}`)}
+                >
+                  <div className="relative h-40 sm:h-48 bg-gray-100">
+                    <img
+                      src={getPropertyImage(property)}
+                      alt={property.title}
+                      className="w-full h-full object-cover"
+                      loading={index < 4 ? "eager" : "lazy"}
+                      decoding="async"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/placeholder.png";
+                      }}
+                    />
+                  </div>
+                  <div className="p-3 sm:p-4">
+                    <h2 className="font-bold text-base sm:text-lg truncate">
+                      {property.title}
+                    </h2>
+                    <p className="text-gray-600 text-sm mb-2 flex items-center">
+                      <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                      <span className="truncate">{property.location}</span>
+                    </p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-red-600 font-semibold text-sm sm:text-base">
+                        ${property.monthlyPrice.toLocaleString()}
+                        <span className="text-xs sm:text-sm text-gray-500 font-normal">
+                          {t("home.perMonth")}
+                        </span>
+                      </p>
+                      {property.bedrooms && (
+                        <span className="text-xs text-gray-500 flex items-center">
+                          <svg
+                            className="w-4 h-4 mr-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                            />
+                          </svg>
+                          {property.bedrooms}{" "}
+                          {property.bedrooms === 1
+                            ? t("home.bed")
+                            : t("home.beds")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </>
         )}
       </div>
@@ -238,8 +293,12 @@ export default function HomeClient({ initialProperties }: Props) {
         <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
           <span>{t("footer.copyright")}</span>
           <div className="flex gap-6">
-            <a href="/terms" className="hover:text-red-600 transition-colors">{t("footer.terms")}</a>
-            <a href="/terms#privacy" className="hover:text-red-600 transition-colors">{t("footer.privacy")}</a>
+            <a href="/terms" className="hover:text-red-600 transition-colors">
+              {t("footer.terms")}
+            </a>
+            <a href="/terms#privacy" className="hover:text-red-600 transition-colors">
+              {t("footer.privacy")}
+            </a>
           </div>
         </div>
       </footer>
