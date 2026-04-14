@@ -1,14 +1,24 @@
 // profileApi.ts
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
-export const getProfile = async (token: string) => {
-  const res = await fetch(`${API_BASE}/users/profile`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+function handleAuthError(res: Response): void {
+  if (res.status === 401 && typeof window !== "undefined") {
+    localStorage.removeItem("berenda_token");
+    localStorage.removeItem("berenda_user");
+    window.location.href = "/auth/login";
+  }
+}
+
+async function authedFetch(url: string, options: RequestInit = {}) {
+  const res = await fetch(url, options);
+  handleAuthError(res);
   return res.json();
-};
+}
+
+export const getProfile = (token: string) =>
+  authedFetch(`${API_BASE}/users/profile`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
 // Single PUT call — backend route is PUT /users/profile with multer("avatar")
 export const updateProfile = async (data: any, token: string, imageFile?: File) => {
@@ -17,7 +27,7 @@ export const updateProfile = async (data: any, token: string, imageFile?: File) 
   if (data.phone) formData.append("phone", data.phone);
   if (imageFile) formData.append("avatar", imageFile);
 
-  const res = await fetch(`${API_BASE}/users/profile`, {
+  return authedFetch(`${API_BASE}/users/profile`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -25,37 +35,25 @@ export const updateProfile = async (data: any, token: string, imageFile?: File) 
     },
     body: formData,
   });
-  return res.json();
 };
 
-export const getUserBookings = async (token: string) => {
-  const res = await fetch(`${API_BASE}/bookings`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return res.json();
-};
-
-export const getFavorites = async (token: string) => {
-  const res = await fetch(`${API_BASE}/favorites`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return res.json();
-};
-
-// Add these missing functions
-export const getHostBookings = async (token: string) => {
-  const res = await fetch(`${API_BASE}/bookings/host`, {
+export const getUserBookings = (token: string) =>
+  authedFetch(`${API_BASE}/bookings`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return res.json();
-};
 
-export const updateBookingStatus = async (token: string, bookingId: string, status: string) => {
-  const res = await fetch(`${API_BASE}/bookings/${bookingId}/status`, {
+export const getFavorites = (token: string) =>
+  authedFetch(`${API_BASE}/favorites`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const getHostBookings = (token: string) =>
+  authedFetch(`${API_BASE}/bookings/host`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const updateBookingStatus = (token: string, bookingId: string, status: string) =>
+  authedFetch(`${API_BASE}/bookings/${bookingId}/status`, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -63,29 +61,19 @@ export const updateBookingStatus = async (token: string, bookingId: string, stat
     },
     body: JSON.stringify({ status }),
   });
-  return res.json();
-};
 
-export const getUserProperties = async (token: string) => {
-  const res = await fetch(`${API_BASE}/properties/user/properties`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+export const getUserProperties = (token: string) =>
+  authedFetch(`${API_BASE}/properties/user/properties`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
-  return res.json();
-};
 
-export const getSettings = async (token: string) => {
-  const res = await fetch(`${API_BASE}/users/settings`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+export const getSettings = (token: string) =>
+  authedFetch(`${API_BASE}/users/settings`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
-  return res.json();
-};
 
-export const updateUserSettings = async (settings: any, token: string) => {
-  const res = await fetch(`${API_BASE}/users/settings`, {
+export const updateUserSettings = (settings: any, token: string) =>
+  authedFetch(`${API_BASE}/users/settings`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -93,5 +81,3 @@ export const updateUserSettings = async (settings: any, token: string) => {
     },
     body: JSON.stringify(settings),
   });
-  return res.json();
-};

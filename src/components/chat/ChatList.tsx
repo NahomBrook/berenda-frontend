@@ -35,7 +35,14 @@ export default function ChatList({ onSelectChat, selectedChatId }: ChatListProps
       const data = await chatApi.getChats();
       setChats(data.chats || []);
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
+      // Token expired or invalid — clear session and redirect to login
+      if (err?.message?.toLowerCase().includes("token") || err?.message?.toLowerCase().includes("401") || err?.message?.toLowerCase().includes("unauthorized")) {
+        localStorage.removeItem("berenda_token");
+        localStorage.removeItem("berenda_user");
+        router.push("/auth/login");
+        return;
+      }
       console.error("Error fetching chats:", err);
       setError("Failed to load conversations");
     } finally {

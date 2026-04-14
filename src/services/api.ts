@@ -28,7 +28,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('berenda_token');
       localStorage.removeItem('berenda_user');
-      window.location.href = '/login';
+      window.location.href = '/auth/login';
       return Promise.reject(error);
     }
     // Retry once on timeout (ECONNABORTED) or network error — handles Render cold start
