@@ -1,14 +1,12 @@
 // frontend/src/app/listings/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, ChangeEvent } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   getPropertyById,
-  updateProperty,
   deleteProperty,
-  uploadPropertyImages,
 } from "../../../utils/api";
 import Navbar from "@/components/layout/Navbar";
 import { MessageCircle, Bed, Bath, Users, Maximize2, Calendar, Home, Wifi, Coffee, Car, Tv, Dumbbell, Waves, Wind, Utensils, ParkingCircle, Dog, Sparkles, CheckCircle } from "lucide-react";
@@ -81,18 +79,6 @@ export default function PropertyDetailPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    title: "",
-    location: "",
-    description: "",
-    monthlyPrice: "",
-    bedrooms: "",
-    bathrooms: "",
-    area: "",
-    maxGuests: "",
-  });
-  const [files, setFiles] = useState<File[]>([]);
   const [message, setMessage] = useState({ text: "", type: "" });
   
   // Booking state
@@ -157,17 +143,6 @@ export default function PropertyDetailPage() {
             : [],
         };
         setProperty(propertyData);
-
-        setFormData({
-          title: propertyData.title || "",
-          location: propertyData.location || "",
-          description: propertyData.description || "",
-          monthlyPrice: propertyData.monthlyPrice?.toString() || "0",
-          bedrooms: propertyData.bedrooms?.toString() || "",
-          bathrooms: propertyData.bathrooms?.toString() || "",
-          area: propertyData.area?.toString() || "",
-          maxGuests: propertyData.maxGuests?.toString() || "",
-        });
 
         // Fetch booked date ranges so the calendar can block unavailable dates
         try {
@@ -574,9 +549,9 @@ export default function PropertyDetailPage() {
             </div>
 
             {/* Amenities */}
-            {property.amenities && property.amenities.length > 0 && (
-              <div className="bg-white p-6 rounded-lg border border-gray-100">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">{t("listings.amenities")}</h2>
+            <div className="bg-white p-6 rounded-lg border border-gray-100">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">{t("listings.amenities")}</h2>
+              {property.amenities && property.amenities.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {property.amenities.map((amenity) => {
                     const Icon = amenityIcons[amenity] || Sparkles;
@@ -588,8 +563,10 @@ export default function PropertyDetailPage() {
                     );
                   })}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-gray-400">No amenities listed for this property.</p>
+              )}
+            </div>
 
             {/* Location Map - with lower z-index */}
             {property.latitude && property.longitude && (
@@ -785,7 +762,7 @@ export default function PropertyDetailPage() {
               {isOwner && (
                 <div className="mt-6 pt-4 border-t border-gray-200">
                   <button
-                    onClick={() => setEditing(true)}
+                    onClick={() => router.push(`/properties/host?edit=${propertyId}`)}
                     className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition mb-2"
                   >
                     Edit Property
