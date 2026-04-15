@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
+import { Eye, EyeOff } from "lucide-react";
 import Navbar from "../../../components/layout/Navbar";
 import { registerUser } from "../../../utils/api";
 import { API_BASE_URL } from "@/utils/api";
@@ -16,6 +17,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -183,15 +185,25 @@ export default function RegisterPage() {
             disabled={loading}
           />
 
-          <input
-            type="password"
-            placeholder={t("auth.register.password") || "Password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-400"
-            required
-            disabled={loading}
-          />
+          <div className="relative mb-4">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder={t("auth.register.password") || "Password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 pr-10 border rounded focus:outline-none focus:ring-2 focus:ring-red-400"
+              required
+              disabled={loading}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
 
           <label className="flex items-center mb-6">
             <input

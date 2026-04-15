@@ -185,7 +185,7 @@ export default function Navbar({ onSearchClick, showSearchButton = false }: Navb
 
           {/* Desktop: Host link + Chat */}
           <span
-            className="hidden md:inline cursor-pointer hover:text-gray-900 transition-colors whitespace-nowrap text-sm font-medium px-2"
+            className="hidden md:inline cursor-pointer text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors whitespace-nowrap text-sm font-medium px-3 py-2"
             onClick={handleHostClick}
           >
             {t("nav.host")}
@@ -202,7 +202,15 @@ export default function Navbar({ onSearchClick, showSearchButton = false }: Navb
           {user && (
             <div className="relative">
               <button
-                onClick={() => { setIsNotifOpen(!isNotifOpen); setIsDropdownOpen(false); }}
+                onClick={() => {
+                  const opening = !isNotifOpen;
+                  setIsNotifOpen(opening);
+                  setIsDropdownOpen(false);
+                  // Auto-mark all as read 2 seconds after opening the panel
+                  if (opening && unreadCount > 0) {
+                    setTimeout(() => handleMarkAllRead(), 2000);
+                  }
+                }}
                 className="relative p-2 hover:bg-gray-100 rounded-full transition"
                 aria-label={t("nav.notifications")}
               >

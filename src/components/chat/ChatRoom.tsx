@@ -16,47 +16,47 @@ export default function ChatRoom({ chatId, onBack }: ChatRoomProps) {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [participant, setParticipant] = useState<{ fullName: string } | null>(null);
+  const [participant, setParticipant] = useState<{ fullName: string; userId?: string } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    let uid: string | null = null;
     const user = localStorage.getItem("berenda_user");
     if (user) {
       try {
         const parsed = JSON.parse(user);
+        uid = parsed.id;
         setCurrentUserId(parsed.id);
       } catch (e) {
         console.error("Error parsing user:", e);
       }
     }
 
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 3000);
+    const load = async () => {
+      try {
+        const data = await chatApi.getMessages(chatId);
+        setMessages(data.messages || []);
+        if (data.chat?.participants) {
+          const other = data.chat.participants.find((p: any) => p.userId !== uid);
+          if (other) setParticipant(other);
+        }
+      } catch (err) {
+        console.error("Error fetching messages:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+    const interval = setInterval(load, 3000);
     return () => clearInterval(interval);
   }, [chatId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  const fetchMessages = async () => {
-    try {
-      const data = await chatApi.getMessages(chatId);
-      setMessages(data.messages || []);
-
-      if (data.chat?.participants) {
-        const other = data.chat.participants.find((p: any) => p.userId !== currentUserId);
-        if (other) setParticipant(other);
-      }
-    } catch (err) {
-      console.error("Error fetching messages:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || sending) return;
@@ -141,8 +141,7 @@ export default function ChatRoom({ chatId, onBack }: ChatRoomProps) {
           </span>
         </div>
         <div>
-          <h3 className="font-semibold text-gray-900">{participant?.fullName || "User"}</h3>
-          <p className="text-xs text-green-500">Online</p>
+          <h3 className="font-semibold text-gray-900">{participant?.fullName || "Chat"}</h3>
         </div>
       </div>
 

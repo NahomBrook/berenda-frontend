@@ -145,7 +145,17 @@ export default function PropertyDetailPage() {
         }
 
         // Handle response structure (data might be wrapped in data.data)
-        const propertyData = data.data || data;
+        const raw = data.data || data;
+        // Backend returns amenities as join-table objects: [{ amenity: { name } }]
+        // Flatten to string[] so the UI amenity map works correctly
+        const propertyData = {
+          ...raw,
+          amenities: Array.isArray(raw.amenities)
+            ? raw.amenities.map((a: any) =>
+                typeof a === "string" ? a : a?.amenity?.name ?? a?.name ?? ""
+              ).filter(Boolean)
+            : [],
+        };
         setProperty(propertyData);
 
         setFormData({
@@ -658,18 +668,28 @@ export default function PropertyDetailPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("listings.guests")}</label>
-                    <select
-                      value={guests}
-                      onChange={(e) => setGuests(Number(e.target.value))}
-                      className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                        <option key={num} value={num}>
-                          {num} {num === 1 ? t("listings.guest") : t("listings.guestPlural")}
-                        </option>
-                      ))}
-                    </select>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("listings.guests")}</label>
+                    <div className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-2">
+                      <button
+                        type="button"
+                        onClick={() => setGuests(g => Math.max(1, g - 1))}
+                        disabled={guests <= 1}
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:border-gray-500 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 12H4" /></svg>
+                      </button>
+                      <span className="text-gray-900 font-medium">
+                        {guests} {guests === 1 ? t("listings.guest") : t("listings.guestPlural")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setGuests(g => Math.min(property.maxGuests || 8, g + 1))}
+                        disabled={guests >= (property.maxGuests || 8)}
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:border-gray-500 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                      </button>
+                    </div>
                   </div>
 
                   <button

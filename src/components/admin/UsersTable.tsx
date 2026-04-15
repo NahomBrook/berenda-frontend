@@ -9,7 +9,18 @@ export default function UsersTable() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState<{ msg: string; type?: "success" | "error" } | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const pendingRef = useRef<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("berenda_user") || "{}");
+      const superAdmin = user?.roles?.some((r: any) =>
+        ["SUPER_ADMIN", "super_admin"].includes(r.name)
+      );
+      setIsSuperAdmin(!!superAdmin);
+    } catch {}
+  }, []);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -38,6 +49,21 @@ export default function UsersTable() {
     try {
       await updateUserRole(userId, "ADMIN");
       setToast({ msg: "User promoted to Admin.", type: "success" });
+      fetchUsers();
+    } catch (err: any) {
+      setToast({ msg: err?.message || "Failed to update role", type: "error" });
+    } finally {
+      pendingRef.current[userId] = false;
+    }
+  };
+
+  const handleDemote = async (userId: string) => {
+    if (!confirm("Remove this user's admin role?")) return;
+    if (pendingRef.current[userId]) return;
+    pendingRef.current[userId] = true;
+    try {
+      await updateUserRole(userId, "USER");
+      setToast({ msg: "Admin role removed.", type: "success" });
       fetchUsers();
     } catch (err: any) {
       setToast({ msg: err?.message || "Failed to update role", type: "error" });
@@ -131,13 +157,28 @@ export default function UsersTable() {
                       )}
                     </td>
                     <td className="p-3 text-sm flex flex-wrap gap-1">
-                      <button
-                        disabled={!!pendingRef.current[u.id]}
-                        onClick={() => handlePromote(u.id)}
-                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                      >
-                        Promote
-                      </button>
+                      {isSuperAdmin && (() => {
+                        const isAlreadyAdmin = u.roles?.some((r: any) =>
+                          ["ADMIN", "SUPER_ADMIN", "admin", "super_admin"].includes(r.role?.name)
+                        );
+                        return isAlreadyAdmin ? (
+                          <button
+                            disabled={!!pendingRef.current[u.id]}
+                            onClick={() => handleDemote(u.id)}
+                            className="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50"
+                          >
+                            Demote
+                          </button>
+                        ) : (
+                          <button
+                            disabled={!!pendingRef.current[u.id]}
+                            onClick={() => handlePromote(u.id)}
+                            className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            Make Admin
+                          </button>
+                        );
+                      })()}
                       {banned ? (
                         <button
                           disabled={!!pendingRef.current[u.id]}

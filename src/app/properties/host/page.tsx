@@ -4,7 +4,7 @@ import { useState, ChangeEvent, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/layout/Navbar";
-import { createProperty, uploadPropertyImages } from "@/utils/api";
+import { createProperty, updateProperty, uploadPropertyImages, getPropertyById } from "@/utils/api";
 import DragDropImageUpload from "@/components/DragDropImageUpload";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -105,10 +105,42 @@ export default function HostPropertyPage() {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Load property data for edit mode
+  useEffect(() => {
+    if (!isMounted) return;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("edit");
+    if (!id) return;
+    setEditId(id);
+    getPropertyById(id).then((res) => {
+      const p = res?.data || res;
+      if (!p) return;
+      setFormData({
+        title: p.title || "",
+        description: p.description || "",
+        location: p.location || "",
+        latitude: p.latitude?.toString() || "",
+        longitude: p.longitude?.toString() || "",
+        monthlyPrice: p.monthlyPrice?.toString() || "",
+        bedrooms: p.bedrooms?.toString() || "",
+        bathrooms: p.bathrooms?.toString() || "",
+        area: p.area?.toString() || "",
+        amenities: Array.isArray(p.amenities)
+          ? p.amenities.map((a: any) => typeof a === "string" ? a : a?.amenity?.name ?? a?.name ?? "").filter(Boolean)
+          : [],
+      });
+      if (p.latitude && p.longitude) {
+        setMapSelected(true);
+        setZoomToLocation({ lat: p.latitude, lng: p.longitude, address: p.location });
+      }
+    }).catch(console.error);
+  }, [isMounted]);
 
   // Check authentication
   useEffect(() => {
@@ -233,7 +265,8 @@ export default function HostPropertyPage() {
   };
 
   const validateMedia = () => {
-    if (imageFiles.length === 0) {
+    // In edit mode, new images are optional (property already has images)
+    if (!editId && imageFiles.length === 0) {
       setError("Please upload at least one image of your property");
       return false;
     }
@@ -300,6 +333,41 @@ export default function HostPropertyPage() {
     }
   };
 
+  const handleSaveAsDraft = async () => {
+    if (!formData.title.trim()) {
+      setError("Please enter at least a title to save a draft");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const payload: any = {
+        title: formData.title,
+        description: formData.description,
+        location: formData.location || "",
+        latitude: formData.latitude ? parseFloat(formData.latitude) : 0,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : 0,
+        monthlyPrice: formData.monthlyPrice ? parseFloat(formData.monthlyPrice) : 0,
+        bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
+        bathrooms: formData.bathrooms ? parseFloat(formData.bathrooms) : undefined,
+        area: formData.area ? parseFloat(formData.area) : undefined,
+        amenities: formData.amenities,
+        isDraft: true,
+      };
+      const response = await createProperty(payload);
+      const propertyId = response.data?.id || response.id;
+      if (imageFiles.length > 0 && propertyId) {
+        await uploadPropertyImages(propertyId, imageFiles);
+      }
+      setSuccessMessage("Draft saved! You can continue editing it from your profile.");
+      setTimeout(() => router.push("/profile?tab=hosting"), 2500);
+    } catch (err: any) {
+      setError(err.message || "Failed to save draft. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setError(null);
     setLoading(true);
@@ -318,19 +386,28 @@ export default function HostPropertyPage() {
         amenities: formData.amenities,
       };
 
-      const response = await createProperty(propertyData);
-      const propertyId = response.data?.id || response.id;
-
-      if (imageFiles.length > 0 && propertyId) {
-        await uploadPropertyImages(propertyId, imageFiles);
+      let propertyId: string;
+      if (editId) {
+        await updateProperty(editId, propertyData);
+        propertyId = editId;
+        if (imageFiles.length > 0) {
+          await uploadPropertyImages(propertyId, imageFiles);
+        }
+        setSuccessMessage("Property updated successfully!");
+        setTimeout(() => router.push("/profile?tab=hosting"), 3000);
+      } else {
+        const response = await createProperty(propertyData);
+        propertyId = response.data?.id || response.id;
+        if (imageFiles.length > 0 && propertyId) {
+          await uploadPropertyImages(propertyId, imageFiles);
+        }
+        setSuccessMessage(t("host.success"));
+        setTimeout(() => router.push("/"), 3000);
       }
 
-      setSuccessMessage(t("host.success"));
-      setTimeout(() => router.push("/"), 3000);
-      
     } catch (err: any) {
-      console.error("Error creating property:", err);
-      setError(err.message || "Failed to create property. Please try again.");
+      console.error("Error submitting property:", err);
+      setError(err.message || (editId ? "Failed to update property." : "Failed to create property.") + " Please try again.");
     } finally {
       setLoading(false);
     }
@@ -363,8 +440,8 @@ export default function HostPropertyPage() {
             {t("common.back")}
           </button>
           
-          <h1 className="text-3xl font-light text-gray-900 mb-2">{t("host.listYourProperty")}</h1>
-          <p className="text-gray-500">{t("host.share")}</p>
+          <h1 className="text-3xl font-light text-gray-900 mb-2">{editId ? "Edit Property" : t("host.listYourProperty")}</h1>
+          <p className="text-gray-500">{editId ? "Update your property details below." : t("host.share")}</p>
         </div>
 
         {/* Progress bar */}
@@ -591,39 +668,42 @@ export default function HostPropertyPage() {
                   />
                 </div>
                 
-                <div className="mt-2 flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={mapSelected}
-                    readOnly
-                    className="w-4 h-4 text-green-600"
-                  />
-                  <label className="text-sm text-gray-600">
-                    {mapSelected 
-                      ? "✓ Location confirmed! You can proceed." 
-                      : "Select a location from search above or click on the map"}
-                  </label>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mt-3">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Latitude</label>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
                     <input
-                      type="text"
-                      value={formData.latitude}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-1 text-sm bg-gray-50"
+                      type="checkbox"
+                      checked={mapSelected}
                       readOnly
+                      className="w-4 h-4 text-green-600"
                     />
+                    <label className="text-sm text-gray-600">
+                      {mapSelected
+                        ? "✓ Location confirmed! You can proceed."
+                        : "Select a location from search above or click on the map"}
+                    </label>
                   </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Longitude</label>
-                    <input
-                      type="text"
-                      value={formData.longitude}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-1 text-sm bg-gray-50"
-                      readOnly
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!navigator.geolocation) return;
+                      navigator.geolocation.getCurrentPosition(
+                        async (pos) => {
+                          const { latitude: lat, longitude: lng } = pos.coords;
+                          let address = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                          try {
+                            const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                            const d = await r.json();
+                            if (d.display_name) address = d.display_name;
+                          } catch {}
+                          handleLocationSelect(lat, lng, address);
+                        },
+                        () => alert("Could not get your location. Please allow location access.")
+                      );
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition whitespace-nowrap"
+                  >
+                    📍 Use my location
+                  </button>
                 </div>
               </div>
             </div>
@@ -818,24 +898,35 @@ export default function HostPropertyPage() {
               <div></div>
             )}
 
-            {currentStep < HostingStep.REVIEW ? (
-              <button
-                onClick={handleNext}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-              >
-                {t("host.next")}
-              </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className={`px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition ${
-                  loading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                {loading ? t("host.listing") : t("host.button.list")}
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {!editId && (
+                <button
+                  onClick={handleSaveAsDraft}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+                >
+                  Save Draft
+                </button>
+              )}
+              {currentStep < HostingStep.REVIEW ? (
+                <button
+                  onClick={handleNext}
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                >
+                  {t("host.next")}
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className={`px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition ${
+                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {loading ? t("host.listing") : (editId ? "Update Listing" : t("host.button.list"))}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

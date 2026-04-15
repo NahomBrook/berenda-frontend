@@ -291,7 +291,7 @@ export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps
           <div className="hidden sm:flex items-center px-4 py-2 gap-2">
             {/* Where - Desktop */}
             <div ref={locationRef} className={`flex-1 relative rounded-full transition-all duration-200 ${getActiveFieldClass('location')}`}>
-              <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 rounded-full transition">
+              <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-100 rounded-full transition">
                 <MapPin className="w-5 h-5 text-red-500 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("search.where")}</p>
@@ -349,7 +349,7 @@ export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps
               onFocus={() => setActiveField('checkIn')}
               onBlur={() => setTimeout(() => setActiveField(null), 200)}
             >
-              <div className="px-4 py-3 hover:bg-gray-50 rounded-full transition">
+              <div className="px-4 py-3 hover:bg-gray-100 rounded-full transition">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("search.checkIn")}</p>
                 <p className={`text-sm font-medium truncate ${checkIn ? 'text-gray-800' : 'text-gray-400'}`}>
                   {formatDate(checkIn)}
@@ -366,7 +366,7 @@ export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps
               onFocus={() => setActiveField('checkOut')}
               onBlur={() => setTimeout(() => setActiveField(null), 200)}
             >
-              <div className="px-4 py-3 hover:bg-gray-50 rounded-full transition">
+              <div className="px-4 py-3 hover:bg-gray-100 rounded-full transition">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("search.checkOut")}</p>
                 <p className={`text-sm font-medium truncate ${checkOut ? 'text-gray-800' : 'text-gray-400'}`}>
                   {formatDate(checkOut)}
@@ -379,7 +379,7 @@ export default function SearchBar({ isVisible = true, onSearch }: SearchBarProps
             {/* Filters Button - Desktop */}
             <button
               onClick={() => setShowFilterModal(true)}
-              className={`relative px-4 py-3 rounded-full transition-all duration-200 hover:bg-gray-50 ${hasActiveFilters() ? 'bg-red-50' : ''}`}
+              className={`relative px-4 py-3 rounded-full transition-all duration-200 hover:bg-gray-100 ${hasActiveFilters() ? 'bg-red-50' : ''}`}
             >
               <SlidersHorizontal className={`w-5 h-5 ${hasActiveFilters() ? 'text-red-500' : 'text-gray-600'}`} />
               {hasActiveFilters() && (

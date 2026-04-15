@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin } from "lucide-react";
+import { MapPin, Heart } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import SearchBar from "@/components/home/SearchBar";
-import { propertyAPI } from "@/services/api";
+import { propertyAPI, favoritesAPI } from "@/services/api";
 import type { Property } from "@/types/property";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -48,8 +48,46 @@ export default function HomeClient({ initialProperties }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [showSearchBar, setShowSearchBar] = useState(true);
   const [showSearchInNav, setShowSearchInNav] = useState(false);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   // Lazy initializer: reads URL params once on mount (client-only — no useSearchParams needed)
   const [currentFilters, setCurrentFilters] = useState(parseInitialFilters);
+
+  // Load saved favorites for the logged-in user
+  useEffect(() => {
+    const token = localStorage.getItem("berenda_token");
+    if (!token) return;
+    favoritesAPI.list().then((res) => {
+      const ids: string[] = (res.data?.data || []).map((f: any) => f.propertyId || f.id);
+      setFavorites(new Set(ids));
+    }).catch(() => {});
+  }, []);
+
+  const toggleFavorite = useCallback(async (e: React.MouseEvent, propertyId: string) => {
+    e.stopPropagation();
+    const token = localStorage.getItem("berenda_token");
+    if (!token) { router.push("/auth/login"); return; }
+    const isSaved = favorites.has(propertyId);
+    // Optimistic update
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      isSaved ? next.delete(propertyId) : next.add(propertyId);
+      return next;
+    });
+    try {
+      if (isSaved) {
+        await favoritesAPI.remove(propertyId);
+      } else {
+        await favoritesAPI.add(propertyId);
+      }
+    } catch {
+      // Revert on failure
+      setFavorites((prev) => {
+        const next = new Set(prev);
+        isSaved ? next.add(propertyId) : next.delete(propertyId);
+        return next;
+      });
+    }
+  }, [favorites, router]);
 
   // If server gave us empty properties (build-time fetch failed), fetch client-side
   useEffect(() => {
@@ -243,6 +281,18 @@ export default function HomeClient({ initialProperties }: Props) {
                         (e.target as HTMLImageElement).src = "/placeholder.png";
                       }}
                     />
+                    <button
+                      onClick={(e) => toggleFavorite(e, property.id)}
+                      className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/70 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors border border-red-200"
+                      aria-label={favorites.has(property.id) ? "Remove from wishlist" : "Add to wishlist"}
+                    >
+                      <Heart
+                        className="w-4 h-4"
+                        fill={favorites.has(property.id) ? "#ef4444" : "none"}
+                        stroke={favorites.has(property.id) ? "#ef4444" : "#ef4444"}
+                        strokeWidth={2}
+                      />
+                    </button>
                   </div>
                   <div className="p-3 sm:p-4">
                     <h2 className="font-bold text-base sm:text-lg truncate">

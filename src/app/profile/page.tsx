@@ -62,7 +62,7 @@ interface HostedProperty {
   title: string;
   location: string;
   monthlyPrice: number;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
   imageUrl: string;
   createdAt: string;
   rejectionReason?: string;
@@ -227,46 +227,46 @@ export default function ProfileDashboard() {
     fetchWishlist();
   }, [token]);
 
-  useEffect(() => {
+  const fetchHostedProperties = async () => {
     if (!token) return;
-    
-    const fetchHostedProperties = async () => {
-      try {
-        const res = await getUserProperties(token);
-        if (res.success && res.data) {
-          const transformedProperties = res.data.map((property: any) => ({
-            id: property.id,
-            title: property.title,
-            location: property.location,
-            monthlyPrice: property.monthlyPrice,
-            status: property.approvalStatus,
-            imageUrl: property.media?.[0]?.mediaUrl || "/placeholder.png",
-            createdAt: property.createdAt,
-            rejectionReason: property.rejectionReason || undefined,
-            appealMessage: property.appealMessage || undefined,
-          }));
-          setHostedProperties(transformedProperties);
+    try {
+      const res = await getUserProperties(token);
+      if (res.success && res.data) {
+        const transformedProperties = res.data.map((property: any) => ({
+          id: property.id,
+          title: property.title,
+          location: property.location,
+          monthlyPrice: property.monthlyPrice,
+          status: property.approvalStatus,
+          imageUrl: property.media?.[0]?.mediaUrl || "/placeholder.png",
+          createdAt: property.createdAt,
+          rejectionReason: property.rejectionReason || undefined,
+          appealMessage: property.appealMessage || undefined,
+        }));
+        setHostedProperties(transformedProperties);
 
-          // Auto-open appeal modal if notification deep-linked to a specific property
-          const pendingAppealId = sessionStorage.getItem("appeal_propertyId");
-          if (pendingAppealId) {
-            sessionStorage.removeItem("appeal_propertyId");
-            const target = transformedProperties.find((p: HostedProperty) => p.id === pendingAppealId);
-            if (target && target.status === "rejected") {
-              setAppealModal({
-                open: true,
-                propertyId: target.id,
-                propertyTitle: target.title,
-                rejectionReason: target.rejectionReason || "Does not meet our listing requirements",
-              });
-            }
+        // Auto-open appeal modal if notification deep-linked to a specific property
+        const pendingAppealId = sessionStorage.getItem("appeal_propertyId");
+        if (pendingAppealId) {
+          sessionStorage.removeItem("appeal_propertyId");
+          const target = transformedProperties.find((p: HostedProperty) => p.id === pendingAppealId);
+          if (target && target.status === "rejected") {
+            setAppealModal({
+              open: true,
+              propertyId: target.id,
+              propertyTitle: target.title,
+              rejectionReason: target.rejectionReason || "Does not meet our listing requirements",
+            });
           }
         }
-      } catch (error) {
-        console.error("Error fetching hosted properties:", error);
       }
-    };
-    
+    } catch (error) {
+      console.error("Error fetching hosted properties:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) return;
     fetchHostedProperties();
     getHostBookings(token).then((res) => {
       if (res.success && res.data) setHostBookings(res.data);
@@ -471,6 +471,8 @@ export default function ProfileDashboard() {
         return 'text-yellow-600 bg-yellow-50';
       case 'rejected':
         return 'text-red-600 bg-red-50';
+      case 'draft':
+        return 'text-gray-500 bg-gray-100';
       default:
         return 'text-gray-600 bg-gray-50';
     }
@@ -908,8 +910,36 @@ export default function ProfileDashboard() {
                                     {property.status === 'pending' && <Clock className="w-4 h-4" />}
                                     {property.status === 'approved' && <CheckCircle className="w-4 h-4" />}
                                     {property.status === 'rejected' && <XCircle className="w-4 h-4" />}
+                                    {property.status === 'draft' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
                                     <span className="capitalize">{property.status}</span>
                                   </div>
+                                  {property.status === 'draft' && (
+                                    <button
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (!confirm("Submit this draft for review?")) return;
+                                        try {
+                                          const token = localStorage.getItem("berenda_token");
+                                          await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/properties/${property.id}`, {
+                                            method: "PATCH",
+                                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                            body: JSON.stringify({ approvalStatus: "pending" }),
+                                          });
+                                          fetchHostedProperties();
+                                        } catch {}
+                                      }}
+                                      className="px-3 py-1 text-xs bg-red-600 text-white rounded-full hover:bg-red-700 transition"
+                                    >
+                                      Publish
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); router.push(`/properties/host?edit=${property.id}`); }}
+                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                    title="Edit property"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L16.732 3.732z" /></svg>
+                                  </button>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); handleDeleteProperty(property.id, property.title); }}
                                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"

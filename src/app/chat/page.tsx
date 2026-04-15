@@ -17,16 +17,25 @@ export default function ChatPage() {
     const token = localStorage.getItem("berenda_token");
     if (!token) {
       router.push("/auth/login");
+      return;
+    }
+
+    // Pre-select chat if navigated here from a "Contact host" button
+    const params = new URLSearchParams(window.location.search);
+    const chatIdParam = params.get("chatId");
+    if (chatIdParam) {
+      setSelectedChatId(chatIdParam);
+      setShowChatList(false);
     }
 
     // Check if mobile
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024);
     };
-    
+
     checkMobile();
     window.addEventListener("resize", checkMobile);
-    
+
     return () => window.removeEventListener("resize", checkMobile);
   }, [router]);
 
