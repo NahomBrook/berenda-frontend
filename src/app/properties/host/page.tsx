@@ -162,25 +162,30 @@ export default function HostPropertyPage() {
     }
 
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Addis Ababa, Ethiopia")}&limit=10`);
+      // Search within Ethiopia; bias toward Addis Ababa via viewbox but allow broader results
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ET&limit=8&addressdetails=1`;
+      const response = await fetch(url, { headers: { "Accept-Language": "en" } });
       const data = await response.json();
       setSearchResults(data);
-      setShowSearchResults(true);
+      setShowSearchResults(data.length > 0);
     } catch (error) {
       console.error("Error searching locations:", error);
     }
   }, []);
 
-  // Debounced search
+  // Debounced search — only fire when not yet confirmed (mapSelected false)
   useEffect(() => {
-    if (!isMounted) return;
+    if (!isMounted || mapSelected) return;
     const timer = setTimeout(() => {
-      if (searchQuery) {
+      if (searchQuery && searchQuery.length >= 2) {
         searchLocations(searchQuery);
+      } else if (!searchQuery) {
+        setSearchResults([]);
+        setShowSearchResults(false);
       }
-    }, 300);
+    }, 250);
     return () => clearTimeout(timer);
-  }, [searchQuery, searchLocations, isMounted]);
+  }, [searchQuery, searchLocations, isMounted, mapSelected]);
 
   const handleLocationSelect = (lat: number, lng: number, address: string) => {
     setFormData(prev => ({
@@ -588,19 +593,30 @@ export default function HostPropertyPage() {
                 <p className="text-sm text-gray-500 mt-1">Search for your location or click on the map</p>
               </div>
 
-              {/* Search Location - PRIMARY METHOD */}
+              {/* Search Location */}
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Search for your address <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={formData.location || searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setFormData(prev => ({ ...prev, location: e.target.value }));
+                    if (!e.target.value) setMapSelected(false);
+                  }}
                   placeholder="e.g., Bole, Addis Ababa or specific street name..."
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className={`w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 ${mapSelected ? "border-green-500 bg-green-50" : "border-gray-200"}`}
                   autoComplete="off"
                 />
+                {mapSelected && (
+                  <button
+                    type="button"
+                    onClick={() => { setFormData(prev => ({ ...prev, location: "", latitude: "", longitude: "" })); setMapSelected(false); setSearchQuery(""); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none"
+                  >×</button>
+                )}
                 {showSearchResults && searchResults.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {searchResults.map((result, idx) => (
@@ -638,22 +654,6 @@ export default function HostPropertyPage() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Location Input - Readonly, shows selected location */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Selected Address <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2 bg-gray-50"
-                  placeholder="Select a location from search above"
-                  readOnly
-                />
               </div>
 
               {/* Map */}

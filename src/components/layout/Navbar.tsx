@@ -81,18 +81,17 @@ export default function Navbar({ onSearchClick, showSearchButton = false }: Navb
   };
 
   const handleNotifClick = async (notif: Notification) => {
-    // Mark as read
     const token = localStorage.getItem("berenda_token");
-    if (token && !notif.isRead) {
+    // Optimistically remove from UI immediately
+    setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
+    if (!notif.isRead) setUnreadCount((prev) => Math.max(0, prev - 1));
+    // Delete on server
+    if (token) {
       try {
-        await fetch(`${API_BASE_URL}/notifications/${notif.id}/read`, {
-          method: "PATCH",
+        await fetch(`${API_BASE_URL}/notifications/${notif.id}`, {
+          method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         });
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
-        );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
       } catch (_) {}
     }
     // Navigate if there's a link

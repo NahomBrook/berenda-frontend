@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 100" fill="none">
-  <!-- Vertical spine -->
-  <rect x="8" y="4" width="14" height="92" rx="7" fill="#B91C1C"/>
-  <!-- Upper bump (P shape) -->
-  <path d="M15 4 Q15 4 44 4 Q62 4 62 26 Q62 48 44 48 L15 48" fill="#B91C1C"/>
-  <!-- Upper bump inner cutout -->
-  <path d="M28 16 Q28 16 42 16 Q50 16 50 26 Q50 36 42 36 L28 36" fill="white"/>
-  <!-- Lower bump (large ring) -->
-  <path d="M15 48 Q15 48 46 44 Q72 44 72 72 Q72 100 46 100 L15 96" fill="#B91C1C"/>
-  <!-- Lower bump inner cutout -->
-  <path d="M28 58 Q28 55 46 56 Q60 57 60 72 Q60 86 46 87 Q32 88 28 86" fill="white"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Red circle background -->
+  <circle cx="32" cy="32" r="32" fill="#DC2626"/>
+  <!-- White B letter: vertical spine -->
+  <rect x="16" y="12" width="9" height="40" rx="4.5" fill="white"/>
+  <!-- Upper bump of B -->
+  <path d="M22 12 Q22 12 36 12 Q46 12 46 22 Q46 32 36 32 L22 32" fill="white"/>
+  <ellipse cx="34" cy="22" rx="7" ry="8" fill="#DC2626"/>
+  <!-- Lower bump of B (larger) -->
+  <path d="M22 32 Q22 32 38 32 Q50 32 50 44 Q50 52 38 52 L22 52" fill="white"/>
+  <ellipse cx="36" cy="43" rx="8" ry="7.5" fill="#DC2626"/>
 </svg>

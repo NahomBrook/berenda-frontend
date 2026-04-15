@@ -25,6 +25,8 @@ import {
   Trash2,
   AlertCircle,
   Send,
+  Bed,
+  Bath,
 } from "lucide-react";
 import { getProfile, updateProfile, getUserBookings, getFavorites, getUserProperties, updateUserSettings, getSettings, getHostBookings, updateBookingStatus, deleteHostProperty, submitPropertyAppeal } from "../../utils/profileApi";
 import Navbar from "@/components/layout/Navbar";
@@ -46,6 +48,9 @@ interface Booking {
   totalPrice: number;
   status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
   imageUrl: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  amenities?: string[];
 }
 
 interface WishlistItem {
@@ -198,7 +203,12 @@ export default function ProfileDashboard() {
             checkOut: booking.endDate,
             totalPrice: booking.totalPrice || booking.property?.monthlyPrice || 0,
             status: mapBookingStatus(booking.status),
-            imageUrl: booking.property?.media?.[0]?.mediaUrl || "/placeholder.png"
+            imageUrl: booking.property?.media?.[0]?.mediaUrl || "/placeholder.png",
+            bedrooms: booking.property?.bedrooms,
+            bathrooms: booking.property?.bathrooms,
+            amenities: Array.isArray(booking.property?.amenities)
+              ? booking.property.amenities.map((a: any) => a?.amenity?.name ?? a?.name ?? a).filter(Boolean)
+              : [],
           }));
           setBookings(transformedBookings);
         }
@@ -787,7 +797,36 @@ export default function ProfileDashboard() {
                                   <Home className="w-4 h-4" />
                                   ${booking.totalPrice} total
                                 </div>
+                                {booking.bedrooms && (
+                                  <div className="flex items-center gap-1">
+                                    <Bed className="w-4 h-4" />
+                                    {booking.bedrooms} bed{booking.bedrooms !== 1 ? "s" : ""}
+                                  </div>
+                                )}
+                                {booking.bathrooms && (
+                                  <div className="flex items-center gap-1">
+                                    <Bath className="w-4 h-4" />
+                                    {booking.bathrooms} bath{booking.bathrooms !== 1 ? "s" : ""}
+                                  </div>
+                                )}
                               </div>
+                              {booking.amenities && booking.amenities.length > 0 && (
+                                <div className="mt-3">
+                                  <p className="text-xs font-medium text-gray-500 mb-1.5">Amenities</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {booking.amenities.slice(0, 8).map((a) => (
+                                      <span key={a} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                                        {a}
+                                      </span>
+                                    ))}
+                                    {booking.amenities.length > 8 && (
+                                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">
+                                        +{booking.amenities.length - 8} more
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
