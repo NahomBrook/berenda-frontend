@@ -107,6 +107,65 @@ export default function HostPropertyPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
 
+  // Auto-save refs — all reads happen at call-time so no closure issues
+  const autoSaveDraftIdRef = useRef<string | null>(null);
+  const hasSubmittedRef = useRef(false);
+  const formDataRef = useRef(formData);
+  const editIdRef = useRef<string | null>(null);
+
+  useEffect(() => { formDataRef.current = formData; }, [formData]);
+  useEffect(() => { editIdRef.current = editId; }, [editId]);
+
+  // Fire-and-forget draft save — safe to call from cleanup / beforeunload
+  const autoSave = useCallback(() => {
+    if (hasSubmittedRef.current || editIdRef.current) return;
+    const data = formDataRef.current;
+    if (!data.title.trim()) return;
+    const token = localStorage.getItem("berenda_token");
+    if (!token) return;
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+    const body = JSON.stringify({
+      title: data.title,
+      description: data.description,
+      location: data.location || "",
+      latitude: data.latitude ? parseFloat(data.latitude) : 0,
+      longitude: data.longitude ? parseFloat(data.longitude) : 0,
+      monthlyPrice: data.monthlyPrice ? parseFloat(data.monthlyPrice) : 0,
+      bedrooms: data.bedrooms ? parseInt(data.bedrooms) : undefined,
+      bathrooms: data.bathrooms ? parseFloat(data.bathrooms) : undefined,
+      area: data.area ? parseFloat(data.area) : undefined,
+      amenities: data.amenities,
+      isDraft: true,
+    });
+    if (autoSaveDraftIdRef.current) {
+      fetch(`${API_BASE}/properties/${autoSaveDraftIdRef.current}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body,
+        keepalive: true,
+      }).catch(() => {});
+    } else {
+      fetch(`${API_BASE}/properties`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body,
+        keepalive: true,
+      }).then(r => r.json()).then(res => {
+        const id = res.data?.id || res.id;
+        if (id) autoSaveDraftIdRef.current = id;
+      }).catch(() => {});
+    }
+  }, []);
+
+  // Register beforeunload (browser close/refresh) and unmount (in-app navigation)
+  useEffect(() => {
+    window.addEventListener("beforeunload", autoSave);
+    return () => {
+      window.removeEventListener("beforeunload", autoSave);
+      autoSave();
+    };
+  }, [autoSave]);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -361,9 +420,11 @@ export default function HostPropertyPage() {
       };
       const response = await createProperty(payload);
       const propertyId = response.data?.id || response.id;
+      if (propertyId) autoSaveDraftIdRef.current = propertyId;
       if (imageFiles.length > 0 && propertyId) {
         await uploadPropertyImages(propertyId, imageFiles);
       }
+      hasSubmittedRef.current = true;
       setSuccessMessage("Draft saved! You can continue editing it from your profile.");
       setTimeout(() => router.push("/profile?tab=hosting"), 2500);
     } catch (err: any) {
@@ -399,6 +460,7 @@ export default function HostPropertyPage() {
           await uploadPropertyImages(propertyId, imageFiles);
         }
         setSuccessMessage("Property updated successfully!");
+        hasSubmittedRef.current = true;
         setTimeout(() => router.push("/profile?tab=hosting"), 3000);
       } else {
         const response = await createProperty(propertyData);
@@ -406,6 +468,7 @@ export default function HostPropertyPage() {
         if (imageFiles.length > 0 && propertyId) {
           await uploadPropertyImages(propertyId, imageFiles);
         }
+        hasSubmittedRef.current = true;
         setSuccessMessage(t("host.success"));
         setTimeout(() => router.push("/"), 3000);
       }

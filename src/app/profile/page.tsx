@@ -954,22 +954,13 @@ export default function ProfileDashboard() {
                                   </div>
                                   {property.status === 'draft' && (
                                     <button
-                                      onClick={async (e) => {
+                                      onClick={(e) => {
                                         e.stopPropagation();
-                                        if (!confirm("Submit this draft for review?")) return;
-                                        try {
-                                          const token = localStorage.getItem("berenda_token");
-                                          await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/properties/${property.id}`, {
-                                            method: "PATCH",
-                                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                                            body: JSON.stringify({ approvalStatus: "pending" }),
-                                          });
-                                          fetchHostedProperties();
-                                        } catch {}
+                                        router.push(`/properties/host?edit=${property.id}`);
                                       }}
                                       className="px-3 py-1 text-xs bg-red-600 text-white rounded-full hover:bg-red-700 transition"
                                     >
-                                      Publish
+                                      Keep Editing
                                     </button>
                                   )}
                                   <button
