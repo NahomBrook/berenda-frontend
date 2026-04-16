@@ -49,7 +49,7 @@ export default function ProfileListings({ userId }: Props) {
             <div className="p-2">
               <h3 className="font-semibold">{p.title}</h3>
               <p className="text-gray-500">{p.location}</p>
-              <p className="text-red-500 font-semibold">${p.monthlyPrice}/month</p>
+              <p className="text-red-500 font-semibold">ETB {p.monthlyPrice}/month</p>
             </div>
           </div>
         ))}

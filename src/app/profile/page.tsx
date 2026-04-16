@@ -795,7 +795,7 @@ export default function ProfileDashboard() {
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <Home className="w-4 h-4" />
-                                  ${booking.totalPrice} total
+                                  ETB {booking.totalPrice.toLocaleString()} total
                                 </div>
                                 {booking.bedrooms && (
                                   <div className="flex items-center gap-1">
@@ -991,7 +991,7 @@ export default function ProfileDashboard() {
                               <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-600">
                                 <div className="flex items-center gap-1">
                                   <Home className="w-4 h-4" />
-                                  ${property.monthlyPrice}{t("profile.hosting.perMonth")}
+                                  ETB {property.monthlyPrice.toLocaleString()}{t("profile.hosting.perMonth")}
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <Calendar className="w-4 h-4" />

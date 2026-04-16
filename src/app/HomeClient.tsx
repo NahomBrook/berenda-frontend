@@ -304,7 +304,7 @@ export default function HomeClient({ initialProperties }: Props) {
                     </p>
                     <div className="flex justify-between items-center">
                       <p className="text-red-600 font-semibold text-sm sm:text-base">
-                        ${property.monthlyPrice.toLocaleString()}
+                        ETB {property.monthlyPrice.toLocaleString()}
                         <span className="text-xs sm:text-sm text-gray-500 font-normal">
                           {t("home.perMonth")}
                         </span>

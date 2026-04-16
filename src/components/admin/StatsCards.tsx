@@ -33,7 +33,7 @@ export default function StatsCards({ stats }: StatsCardsProps) {
     { title: "Total Properties", value: stats.totalProperties || 0, icon: Home, color: "bg-green-500" },
     { title: "Total Bookings", value: stats.totalBookings || 0, icon: Calendar, color: "bg-purple-500" },
     { title: "Pending Properties", value: stats.pendingProperties || 0, icon: Clock, color: "bg-yellow-500" },
-    { title: "Total Revenue", value: `$${(stats.totalRevenue || 0).toLocaleString()}`, icon: DollarSign, color: "bg-red-500" },
+    { title: "Total Revenue", value: `ETB ${(stats.totalRevenue || 0).toLocaleString()}`, icon: DollarSign, color: "bg-red-500" },
   ];
 
   return (

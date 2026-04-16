@@ -42,7 +42,8 @@ export default function AdminPage() {
       const user = JSON.parse(userStr || "{}");
       const isAdminUser =
         user?.roles?.some((r: any) =>
-          ["ADMIN", "SUPER_ADMIN", "admin", "super_admin"].includes(r.name)
+          ["ADMIN", "SUPER_ADMIN", "admin", "super_admin"].includes(r.name) ||
+          ["ADMIN", "SUPER_ADMIN", "admin", "super_admin"].includes(r.role?.name)
         ) || user?.email === "admin@berenda.com";
 
       if (isAdminUser) {

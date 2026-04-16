@@ -16,7 +16,8 @@ export default function UsersTable() {
     try {
       const user = JSON.parse(localStorage.getItem("berenda_user") || "{}");
       const superAdmin = user?.roles?.some((r: any) =>
-        ["SUPER_ADMIN", "super_admin"].includes(r.name)
+        ["SUPER_ADMIN", "super_admin"].includes(r.name) ||
+        ["SUPER_ADMIN", "super_admin"].includes(r.role?.name)
       );
       setIsSuperAdmin(!!superAdmin);
     } catch {}

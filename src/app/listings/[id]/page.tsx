@@ -407,7 +407,7 @@ export default function PropertyDetailPage() {
             <span>{safeLocation}</span>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-semibold text-red-600">${safeMonthlyPrice.toLocaleString()}</span>
+            <span className="text-2xl font-semibold text-red-600">ETB {safeMonthlyPrice.toLocaleString()}</span>
             <span className="text-gray-500">{t("listings.perMonth")}</span>
           </div>
           {property.approvalStatus === 'pending' && (
@@ -620,7 +620,7 @@ export default function PropertyDetailPage() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-24">
               <div className="mb-4">
-                <span className="text-2xl font-light text-gray-900">${safeMonthlyPrice.toLocaleString()}</span>
+                <span className="text-2xl font-light text-gray-900">ETB {safeMonthlyPrice.toLocaleString()}</span>
                 <span className="text-gray-500">{t("listings.perMonth")}</span>
               </div>
 

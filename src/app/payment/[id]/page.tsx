@@ -371,7 +371,7 @@ export default function PaymentPage() {
                     <div className="flex justify-between items-center pt-2">
                       <span className="text-gray-900 font-semibold">Total price</span>
                       <span className="font-bold text-red-600">
-                        {Number.isFinite(totalAmount) ? totalAmount.toFixed(2) : "0.00"}
+                        ETB {Number.isFinite(totalAmount) ? totalAmount.toLocaleString() : "0.00"}
                       </span>
                     </div>
                   </div>
